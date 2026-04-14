@@ -19,8 +19,7 @@ impl Command for Hello {
         
         Ok(InteractionApplicationCommandCallbackData {
             content: Some(format!("Hello, {}!", name)),
-            choices: None,
-            embeds: None
+            ..Default::default()
         })
     }
 
@@ -58,7 +57,8 @@ impl Command for Hello {
             ApplicationCommandOptionChoice{
                 name: "Charlie".into(),
                 value: "Charlie".into(),
-            }])
+            }]),
+            ..Default::default()
         }))
     }
 }

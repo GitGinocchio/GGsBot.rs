@@ -1,6 +1,7 @@
 use crate::discord::interaction::{
     InteractionApplicationCommandCallbackData, 
 };
+use crate::discord::message::MessageFlags;
 use crate::utils::is_dev;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -15,6 +16,9 @@ pub(crate) struct Version {}
 
 #[async_trait(?Send)]
 impl Command for Version {
+    fn name(&self) -> String { "version".into() }
+    fn description(&self) -> String { "Returns the bot version!".into() }
+
     async fn respond(&self, ctx: &CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError>{
         let metadata: WorkerVersionMetadata = ctx.worker.env.get_binding::<WorkerVersionMetadata>("metadata")?;
         let mut lines = Vec::new();
@@ -40,17 +44,9 @@ impl Command for Version {
 
         Ok(InteractionApplicationCommandCallbackData {
             content: Some(message),
-            choices: None,
-            embeds: None
+            flags: Some(MessageFlags::EPHEMERAL),
+            ..Default::default()
         })
-    }
-
-    fn name(&self) -> String{
-        "version".into()
-    }
-
-    fn description(&self) -> String {
-        "Returns the bot version!".into()
     }
 }
 

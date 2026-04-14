@@ -1,4 +1,5 @@
-use std::sync::LazyLock;
+use std::sync::{LazyLock, atomic::{AtomicBool, Ordering}};
+use reqwest::Client;
 use worker::*;
 
 mod utils;
@@ -9,22 +10,36 @@ use crate::discord::command::CommandMap;
 
 mod commands;
 
+static CLIENT: LazyLock<Client> = LazyLock::new(|| {
+    Client::new()
+});
 
 static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| {
     build_commands!(
         commands::hello::Hello,
         commands::version::Version,
-        commands::register::Register
+        commands::update::Update,
+        commands::clear::Clear
     )
 });
+
+static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 #[event(fetch)]
 pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Response> {
     utils::log_request(&req);
     utils::set_panic_hook();
 
+    if !INITIALIZED.load(Ordering::SeqCst) {
+        if let Err(e) = utils::update_commands(&env).await {
+            worker::console_log!("Errore registrazione iniziale: {:?}", e);
+        } else {
+            INITIALIZED.store(true, Ordering::SeqCst);
+        }
+    }
+
     Router::new()
-        .post_async("/", |req, ctx|  async move {
+        .post_async("/api/interaction", |req, ctx|  async move {
             let mut app = bot::Bot::new(req, ctx);
 
              match app.handle_request().await {

@@ -46,7 +46,10 @@ pub(crate) enum InteractionError {
     GenericError(),
 
     #[error("Cloudflare worker error: {0}")]
-    WorkerError(#[from] worker::Error)
+    WorkerError(#[from] worker::Error),
+
+    #[error("Reqwest error: {0}")]
+    ReqwestError(#[from] reqwest::Error)
 }
 
 impl InteractionError {

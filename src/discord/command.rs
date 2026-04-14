@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use async_trait::async_trait;
+use serde::{Serialize, Deserialize};
 
 use crate::discord::interaction::*;
 use crate::discord::error::InteractionError;
@@ -12,6 +13,12 @@ pub(crate) struct CommandContext<'a> {
     pub(crate) user: Option<User>,
     pub(crate) member: Option<Member>,
     pub(crate) worker: &'a mut worker::RouteContext<()>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ApplicationIntegrationType {
+    GuildInstall,
+    UserInstall
 }
 
 #[allow(dead_code)]
@@ -31,6 +38,10 @@ impl CommandContext<'_> {
             },
             None => None
         }
+    }
+
+    pub fn get_env(&self, key: &str) -> Option<String> {
+        self.worker.env.var(key).map(|b| b.to_string()).ok()
     }
 
     pub async fn kv_get(&self, namespace: &str, key: &str) -> Result<Option<String>, InteractionError> {
@@ -59,14 +70,16 @@ impl CommandContext<'_> {
                     Some(InteractionApplicationCommandCallbackData {
                         content: Some("You must be an admin to use this command!".to_string()),
                         choices: None,
-                        embeds: None
+                        embeds: None,
+                        ..Default::default()
                     })
                 }
             },
             None => Some(InteractionApplicationCommandCallbackData {
                 content: Some("You must use this command inside a discord server.".to_string()),
                 choices: None,
-                embeds: None
+                embeds: None,
+                ..Default::default()
             })
         }
     }
@@ -81,6 +94,8 @@ pub(crate) trait Command: Send + Sync {
     /// add any arguments/choices here, more info at https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-structure
     fn options(&self) -> Option<Vec<ApplicationCommandOption>> { None }
 
+    fn integration_types(&self) -> Option<Vec<ApplicationIntegrationType>> { None }
+
     async fn respond(&self, ctx: &CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError>;
     async fn autocomplete(&self, _ctx: &CommandContext) -> Result<Option<InteractionApplicationCommandCallbackData>, InteractionError> { Ok(None) }
 }
@@ -94,6 +109,7 @@ impl<'a> serde::Serialize for SerializableCommand<'a> {
         state.serialize_field("name", &self.0.name())?;
         state.serialize_field("description", &self.0.description())?;
         state.serialize_field("options", &self.0.options())?;
+        state.serialize_field("integration_types", &self.0.integration_types())?;
         state.end()
     }
 }

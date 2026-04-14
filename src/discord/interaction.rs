@@ -2,9 +2,11 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 use crate::COMMANDS;
+use crate::discord::attachment::Attachment;
 use crate::discord::command::CommandContext;
 use crate::discord::error::{Error, InteractionError};
 use crate::discord::embed::Embed;
+use crate::discord::message::MessageFlags;
 
 #[derive(Deserialize_repr, Serialize)]
 #[repr(u8)]
@@ -45,10 +47,25 @@ pub(crate) struct ApplicationCommandInteractionData {
 
 #[derive(Serialize, Default)]
 pub(crate) struct InteractionApplicationCommandCallbackData {
-    // https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-interaction-callback-data-structure
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) content: Option<String>,
+
     pub(crate) choices: Option<Vec<ApplicationCommandOptionChoice>>,
-    pub(crate) embeds: Option<Vec<Embed>>
+
+    pub(crate) embeds: Option<Vec<Embed>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) flags: Option<MessageFlags>,
+
+    // Usiamo skip_serializing_if anche per i vettori se sono vuoti
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub(crate) attachments: Vec<Attachment>,
+
+    //#[serde(skip_serializing_if = "Option::is_none")]
+    //pub(crate) poll: Option<bool>, // Nota: l'oggetto Poll di Discord è più complesso di un bool
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) tts: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
