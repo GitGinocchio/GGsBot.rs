@@ -5,17 +5,17 @@ use crate::discord::interaction::{
     ApplicationCommandOptionType
 };
 use crate::discord::error::InteractionError;
-use crate::discord::command::{Command, CommandInput};
+use crate::discord::command::{Command, CommandContext};
 
 use async_trait::async_trait;
 
-
+#[derive(Default)]
 pub(crate) struct Hello {}
 
 #[async_trait(?Send)]
 impl Command for Hello {
-    async fn respond(&self, _input: &CommandInput) -> Result<InteractionApplicationCommandCallbackData, InteractionError>{
-        let name = _input.get_option("name").unwrap_or("World");
+    async fn respond(&self, ctx: &CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError>{
+        let name = ctx.get_option("name").unwrap_or("World");
         
         Ok(InteractionApplicationCommandCallbackData {
             content: Some(format!("Hello, {}!", name)),
@@ -43,7 +43,7 @@ impl Command for Hello {
         }])
     }
 
-    async fn autocomplete(&self,  _input: &CommandInput) -> Result<Option<InteractionApplicationCommandCallbackData>, InteractionError> {
+    async fn autocomplete(&self,  _ctx: &CommandContext) -> Result<Option<InteractionApplicationCommandCallbackData>, InteractionError> {
         Ok(Some(InteractionApplicationCommandCallbackData {
             content: None,
             embeds: None,
@@ -62,4 +62,3 @@ impl Command for Hello {
         }))
     }
 }
-

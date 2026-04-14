@@ -1,27 +1,26 @@
+use std::sync::LazyLock;
 use worker::*;
 
-mod discord;
-mod commands;
 mod utils;
 
-use discord::command;
+mod discord;
 use discord::bot;
+use crate::discord::command::CommandMap;
 
-fn log_request(req: &Request) {
-    let cf = req.cf();
+mod commands;
 
-    console_log!(
-        "{} - [{}], located at: {:?}, within: {}",
-        Date::now().to_string(),
-        req.path(),
-        cf.and_then(|cf| cf.coordinates()).unwrap_or_default(),
-        cf.and_then(|cf| cf.region()).unwrap_or("unknown region".into())
-    );
-}
+
+static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| {
+    build_commands!(
+        commands::hello::Hello,
+        commands::version::Version,
+        commands::register::Register
+    )
+});
 
 #[event(fetch)]
 pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Response> {
-    log_request(&req);
+    utils::log_request(&req);
     utils::set_panic_hook();
 
     Router::new()
@@ -35,42 +34,10 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
                 },
                 Err(httperr) => {
                     worker::console_log!("Error response : {}", httperr.to_string());
-                    Response::error(httperr.to_string(), httperr.status as u16)
+                    Response::error(httperr.to_string(), httperr.status_code())
                 }
             }
 
-        })
-        .post_async("/register", |_, ctx|  async move {
-            let commands = command::init_commands();
-
-            let mut to_register: Vec<command::RegisteredCommand> = Vec::new();
-            for boxed in commands.iter() {
-                let com = boxed;
-                let reg = command::RegisteredCommand{name: com.name(), description: com.description(), options: com.options()};
-                to_register.push(reg);
-            }
-
-            let client = reqwest::Client::new();
-            let app_id = ctx.var("DISCORD_APPLICATION_ID")?.to_string();
-            let token = ctx.var("DISCORD_TOKEN")?.to_string();
-            let url = format!("https://discord.com/api/v10/applications/{}/commands", app_id);
-
-            let serialized = serde_json::to_string(&to_register)?;
-            worker::console_log!{"Sending  : {}", serialized};
-            
-            let response = client
-                .put(url)
-                .body(serialized)
-                .header("Authorization", format!("Bot {}", token))
-                .header("Content-Type", "application/json")
-                .send()
-                .await
-                .unwrap()
-                .text()
-                .await
-                .unwrap();
-            worker::console_log!{"Registration response: {}", response};
-            Response::ok(&response)
         })
         .run(req, env)
         .await

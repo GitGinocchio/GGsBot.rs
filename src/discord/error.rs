@@ -8,38 +8,53 @@ pub(crate) enum Error {
     #[error("Header '{0}' not found.")]
     HeaderNotFound(String),
 
-    #[error("Failed to deserialize from or serialize to JSON.")]
+    #[error("JSON error: {0}")]
     JsonFailed(#[from] serde_json::Error),
 
-    #[error("Invalid payload provided: {0}.")]
+    #[error("Invalid payload: {0}")]
     InvalidPayload(String),
 
-    #[error("Verification failed.")]
-    VerificationFailed(VerificationError),
+    #[error("Verification failed: {0}")]
+    VerificationFailed(#[from] VerificationError),
 
-    #[error("Interaction failed.")]
-    InteractionFailed(InteractionError)
+    #[error("Interaction failed: {0}")]
+    InteractionFailed(#[from] InteractionError)
+}
+
+impl Error {
+    pub fn status_code(&self) -> u16 {
+        match self {
+            Self::VerificationFailed(_) => 401,
+            Self::HeaderNotFound(_) | Self::InvalidPayload(_) | Self::EnvironmentVariableNotFound(_) => 400,
+            
+            Self::JsonFailed(_) => 400,
+
+            Self::InteractionFailed(i_err) => i_err.status_code(),
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum InteractionError {
-
-    #[allow(dead_code)]
     #[error("Error communicating with {0}")]
     UpstreamError(String),
 
-    #[error("Command not found {0}")]
+    #[error("Command not found: {0}")]
     UnknownCommand(String),
 
     #[error("Something went wrong")]
     GenericError(),
 
     #[error("Cloudflare worker error: {0}")]
-    WorkerError(String)
+    WorkerError(#[from] worker::Error)
 }
 
-impl From<worker::Error> for InteractionError {
-    fn from(error: worker::Error) -> InteractionError {
-        InteractionError::WorkerError(format!("{}", error))
+impl InteractionError {
+    pub fn status_code(&self) -> u16 {
+        match self {
+            Self::UnknownCommand(_) => 404,
+            Self::UpstreamError(_) => 502,
+            _ => 500, // GenericError e WorkerError
+        }
     }
 }

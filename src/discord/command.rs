@@ -1,21 +1,21 @@
-use serde::{Deserialize, Serialize};
-use crate::commands;
-use crate::discord::interaction::*;
-use crate::discord::error::InteractionError;
+use std::collections::HashMap;
 use async_trait::async_trait;
 
+use crate::discord::interaction::*;
+use crate::discord::error::InteractionError;
+
 #[allow(dead_code)]
-pub(crate) struct CommandInput<'a> {
+pub(crate) struct CommandContext<'a> {
     pub(crate) options: Option<Vec<ApplicationCommandInteractionDataOption>>,
     pub(crate) guild_id: Option<String>,
     pub(crate) channel_id: Option<String>,
     pub(crate) user: Option<User>,
     pub(crate) member: Option<Member>,
-    pub(crate) ctx: &'a mut worker::RouteContext<()>,
+    pub(crate) worker: &'a mut worker::RouteContext<()>,
 }
 
 #[allow(dead_code)]
-impl CommandInput<'_> {
+impl CommandContext<'_> {
     pub fn get_option(&self, name: &str) -> Option<&str> {
         match &self.options {
             Some(options) => {
@@ -34,13 +34,13 @@ impl CommandInput<'_> {
     }
 
     pub async fn kv_get(&self, namespace: &str, key: &str) -> Result<Option<String>, InteractionError> {
-        let kv = self.ctx.kv(namespace).map_err( |_|InteractionError::WorkerError("Bind to kv".into()))?;
+        let kv = self.worker.kv(namespace).map_err( |_|InteractionError::WorkerError("Bind to kv".into()))?;
         let value = kv.get(key).text().await.map_err( |_|InteractionError::WorkerError("Fetching from KV".into()))?;
         Ok(value)
     }
 
     pub async fn kv_put(&self, namespace: &str, key: &str, value: &str) -> Result<(), InteractionError> {
-        let kv = self.ctx.kv(namespace).map_err( |_|InteractionError::WorkerError("bind to kv".into()))?;
+        let kv = self.worker.kv(namespace).map_err( |_|InteractionError::WorkerError("bind to kv".into()))?;
         kv.put(key, value)
         .map_err( |_|InteractionError::WorkerError("bind to KV".into()))?
         .execute()
@@ -73,44 +73,47 @@ impl CommandInput<'_> {
 
 }
 
-
 #[async_trait(?Send)]
-pub(crate) trait Command {
-    async fn respond(&self, _input: &CommandInput) -> Result<InteractionApplicationCommandCallbackData, InteractionError> {
-        // Implement the command logic here
-        unimplemented!()
-    }
+pub(crate) trait Command: Send + Sync {
+    fn name(&self) -> String;
+    fn description(&self) -> String;
 
-    fn name(&self) -> String {
-        // The command name, ie `return "greet".to_string()` for /greet
-        unimplemented!()
-    }
+    /// add any arguments/choices here, more info at https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-structure
+    fn options(&self) -> Option<Vec<ApplicationCommandOption>> { None }
 
-    fn description(&self) -> String {
-        // A short description
-        unimplemented!()
-    }
-    fn options(&self) -> Option<Vec<ApplicationCommandOption>> {
-        // add any arguments/choices here, more info at https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-structure
-        unimplemented!()
-    }
+    async fn respond(&self, ctx: &CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError>;
+    async fn autocomplete(&self, _ctx: &CommandContext) -> Result<Option<InteractionApplicationCommandCallbackData>, InteractionError> { Ok(None) }
+}
 
-    async fn autocomplete(&self, _input: &CommandInput) -> Result<Option<InteractionApplicationCommandCallbackData>, InteractionError> {
-        // If your command supports autocomplete implement the logic here
-        unimplemented!()
+pub struct SerializableCommand<'a>(pub &'a dyn Command);
+
+impl<'a> serde::Serialize for SerializableCommand<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        use serde::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("Command", 3)?;
+        state.serialize_field("name", &self.0.name())?;
+        state.serialize_field("description", &self.0.description())?;
+        state.serialize_field("options", &self.0.options())?;
+        state.end()
     }
 }
 
-#[derive(Deserialize, Serialize)]
-pub(crate) struct RegisteredCommand {
-    pub(crate) name: String,
-    pub(crate) description: String,
-    pub(crate) options: Option<Vec<ApplicationCommandOption>>
-}
+pub type CommandMap = HashMap<String, Box<dyn Command>>;
 
-
-pub(crate) fn init_commands() -> Vec<Box<dyn Command + Sync>> {
-    let mut v : Vec<Box<dyn Command + Sync>> = Vec::new();
-    v.push(Box::new(commands::hello::Hello {}));
-    v
+#[macro_export]
+macro_rules! build_commands {
+    ($($command_type:ty),*) => {
+        {
+            let mut map: $crate::discord::command::CommandMap = std::collections::HashMap::new();
+            $(
+                // Usiamo le parentesi angolari per disambiguare il tipo
+                // e istanziamo la struct. Nota: funziona solo se la struct è {}
+                let cmd: Box<dyn $crate::discord::command::Command + Send + Sync> = 
+                    Box::new(<$command_type>::default()); 
+                
+                map.insert(cmd.name(), cmd);
+            )*
+            map
+        }
+    };
 }

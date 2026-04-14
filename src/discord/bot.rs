@@ -1,5 +1,4 @@
 use crate::discord::interaction::{InteractionResponse, Interaction};
-use crate::discord::http::HttpError;
 use crate::discord::error::Error;
 use crate::discord::verification::verify_signature;
 use worker::{Request, RouteContext};
@@ -43,7 +42,7 @@ impl Bot {
         Ok(body)
     }
 
-    pub async fn handle_request(&mut self) -> Result<InteractionResponse, HttpError> {
+    pub async fn handle_request(&mut self) -> Result<InteractionResponse, Error> {
         let body = self.validate_sig().await?;
 
         worker::console_log!("Request body : {}", body);

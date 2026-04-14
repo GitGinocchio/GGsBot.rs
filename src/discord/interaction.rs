@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use crate::discord::command::{init_commands, CommandInput};
+use crate::COMMANDS;
+use crate::discord::command::CommandContext;
 use crate::discord::error::{Error, InteractionError};
 use crate::discord::embed::Embed;
 
@@ -42,7 +43,7 @@ pub(crate) struct ApplicationCommandInteractionData {
     pub(crate) options: Option<Vec<ApplicationCommandInteractionDataOption>>
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 pub(crate) struct InteractionApplicationCommandCallbackData {
     // https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-interaction-callback-data-structure
     pub(crate) content: Option<String>,
@@ -90,16 +91,16 @@ pub(crate) struct Interaction {
 
 #[derive(Serialize_repr, Deserialize_repr, Clone)]
 #[repr(u8)]
+/// https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-type
 pub(crate) enum ApplicationCommandOptionType {
-    // https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-type
     SubCommand = 1,
     SubCommandGroup = 2,
     String = 3,
 
 }
 #[derive(Deserialize, Serialize, Clone)]
+/// https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-structure
 pub(crate) struct ApplicationCommandOption {
-    // https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-structure
     pub(crate) name: String,
     pub(crate) description: String,
     #[serde(rename = "type")]
@@ -110,8 +111,8 @@ pub(crate) struct ApplicationCommandOption {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
+/// https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-choice-structure
 pub(crate) struct ApplicationCommandOptionChoice {
-    // https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-choice-structure
     pub(crate) name: String,
     pub(crate) value: String
 
@@ -134,8 +135,6 @@ pub struct InteractionResponse {
 }
 
 impl Interaction {
-
-
     pub(crate) fn handle_ping(&self) -> InteractionResponse {
         InteractionResponse {
             ty: InteractionResponseType::Pong,
@@ -143,63 +142,53 @@ impl Interaction {
         }
     }
 
-
     pub(crate) async fn handle_command(&self, ctx: &mut worker::RouteContext<()>) -> Result<InteractionResponse, InteractionError> {
-
         let data = self.data().map_err(|_| InteractionError::GenericError())?;
-        let commands = init_commands();
 
-        let command_input = CommandInput {
+        // Prepariamo il contesto
+        let command_input = CommandContext {
             options: data.options.clone(),
             guild_id: self.guild_id.clone(),
             channel_id: self.channel_id.clone(),
             user: self.user.clone(),
             member: self.member.clone(),
-            ctx: ctx
+            worker: ctx
         };
 
-        for boxed in commands.iter() {
-            let com = boxed;
-            if com.name() == data.name {
-                let response = com.respond(&command_input).await?;
+        if let Some(command) = COMMANDS.get(data.name.as_str()) {
+            let response = command.respond(&command_input).await?;
 
-                return Ok(InteractionResponse {
-                    ty: InteractionResponseType::ChannelMessageWithSource,
-                    data: Some(response),
-                })
-
-            }
+            Ok(InteractionResponse {
+                ty: InteractionResponseType::ChannelMessageWithSource,
+                data: Some(response),
+            })
+        } else {
+            Err(InteractionError::UnknownCommand(data.name.clone()))
         }
-        Err(InteractionError::UnknownCommand(data.name.clone()))
-    
     }
 
     pub(crate) async fn handle_autocomplete(&self, ctx: &mut worker::RouteContext<()>) -> Result<InteractionResponse, InteractionError> {
         let data = self.data().map_err(|_| InteractionError::GenericError())?;
-        let commands = init_commands();
 
-        let command_input = CommandInput {
+        let command_input = CommandContext {
             options: data.options.clone(),
             guild_id: self.guild_id.clone(),
             channel_id: self.channel_id.clone(),
             user: self.user.clone(),
             member: self.member.clone(),
-            ctx: ctx
+            worker: ctx
         };
 
-        for boxed in commands.iter() {
-            let com = boxed;
-            if com.name() == data.name {
-                let response = com.autocomplete(&command_input).await?;
+        if let Some(command) = COMMANDS.get(data.name.as_str()) {
+            let response = command.autocomplete(&command_input).await?;
 
-                return Ok(InteractionResponse {
-                    ty: InteractionResponseType::AutoCompleteResult,
-                    data: response,
-                })
-
-            }
+            Ok(InteractionResponse {
+                ty: InteractionResponseType::AutoCompleteResult,
+                data: response,
+            })
+        } else {
+            Err(InteractionError::UnknownCommand(data.name.clone()))
         }
-        Err(InteractionError::UnknownCommand(data.name.clone()))
     }
 
     pub(crate) async fn perform(&self, ctx: &mut worker::RouteContext<()>) -> Result<InteractionResponse, Error> {
