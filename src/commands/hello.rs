@@ -1,8 +1,11 @@
-use crate::interaction::{
-    InteractionApplicationCommandCallbackData, ApplicationCommandOption, ApplicationCommandOptionChoice, ApplicationCommandOptionType
+use crate::discord::interaction::{
+    InteractionApplicationCommandCallbackData, 
+    ApplicationCommandOption, 
+    ApplicationCommandOptionChoice,
+    ApplicationCommandOptionType
 };
-use crate::error::InteractionError;
-use crate::command::{Command, CommandInput};
+use crate::discord::error::InteractionError;
+use crate::discord::command::{Command, CommandInput};
 
 use async_trait::async_trait;
 

@@ -1,4 +1,4 @@
-use crate::verification::VerificationError;
+use crate::discord::verification::VerificationError;
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum Error {

@@ -2,7 +2,7 @@
 use serde::Serialize;
 use std::fmt;
 
-use crate::error::Error;
+use crate::discord::error::Error;
 
 
 #[derive(Serialize)]

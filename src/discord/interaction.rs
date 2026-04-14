@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use crate::command::{init_commands, CommandInput};
-use crate::error::{Error, InteractionError};
-use crate::embed::Embed;
+use crate::discord::command::{init_commands, CommandInput};
+use crate::discord::error::{Error, InteractionError};
+use crate::discord::embed::Embed;
 
 #[derive(Deserialize_repr, Serialize)]
 #[repr(u8)]

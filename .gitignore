@@ -25,3 +25,6 @@ target/
 
 # Built Visual Studio Code Extensions
 *.vsix
+/.wrangler
+/dist/*
+!/dist/.gitkeep

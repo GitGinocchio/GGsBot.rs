@@ -1,19 +1,22 @@
-use crate::interaction::{InteractionResponse, Interaction};
-use crate::http::HttpError;
-use crate::error::Error;
-use crate::verification::verify_signature;
+use crate::discord::interaction::{InteractionResponse, Interaction};
+use crate::discord::http::HttpError;
+use crate::discord::error::Error;
+use crate::discord::verification::verify_signature;
 use worker::{Request, RouteContext};
 
 
-pub struct App {
+pub struct Bot {
     req: Request, 
     ctx: RouteContext<()>
 }
 
-impl App {
+impl Bot {
 
-    pub fn new(req: Request, ctx: RouteContext<()>) -> App {
-        App{req, ctx}
+    pub fn new(req: Request, ctx: RouteContext<()>) -> Bot {
+        Self {
+            req, 
+            ctx
+        }
     }
 
     fn var(&self, key: &str) -> Result<String, Error> {

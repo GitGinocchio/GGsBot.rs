@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::commands;
-use crate::interaction::*;
-use crate::error::InteractionError;
+use crate::discord::interaction::*;
+use crate::discord::error::InteractionError;
 use async_trait::async_trait;
 
 #[allow(dead_code)]
