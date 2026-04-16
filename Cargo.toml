@@ -22,7 +22,6 @@ hex = "0.4.2"
 reqwest = { version = "0.13.2", features = ["json"] }
 async-trait = "0.1.57"
 chrono = { version = "0.4.44", features = ["serde"] }
-bitflags = { version = "2.11.1", features = ["serde"] }
 twilight-model = { version = "0.17.1" }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
@@ -32,6 +31,8 @@ twilight-model = { version = "0.17.1" }
 console_error_panic_hook = { version = "0.1.1", optional = true }
 
 [profile.release]
-# Tell `rustc` to optimize for small code size.
-opt-level = "s"
-
+opt-level = "z"     # Ottimizza specificamente per la dimensione del file
+lto = true          # Link Time Optimization (rimuove codice morto tra le crate)
+codegen-units = 1   # Migliora l'ottimizzazione a scapito del tempo di compilazione
+panic = "abort"     # Rimuove l'infrastruttura per l'unwinding dei panic
+strip = true        # Rimuove tutti i simboli di debug (fondamentale!)
