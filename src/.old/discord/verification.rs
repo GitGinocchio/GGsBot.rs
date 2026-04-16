@@ -1,6 +1,7 @@
+use std::convert::TryInto as _;
+
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use hex::FromHexError;
-
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum VerificationError {

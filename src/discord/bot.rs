@@ -1,58 +1,46 @@
-use crate::discord::interaction::{InteractionResponse, Interaction};
-use crate::discord::error::Error;
-use crate::discord::verification::verify_signature;
+use twilight_model::{application::interaction::Interaction, http::interaction::InteractionResponse};
 use worker::{Request, RouteContext};
 
+use crate::{discord::{interaction::InteractionExt, verification::verify_signature}, error::Error};
 
 pub struct Bot {
-    req: Request, 
-    ctx: RouteContext<()>
+    ctx: RouteContext<()>,
 }
 
 impl Bot {
-
-    pub fn new(req: Request, ctx: RouteContext<()>) -> Bot {
-        Self {
-            req, 
-            ctx
-        }
+    pub fn new(ctx: RouteContext<()>) -> Self {
+        Self { ctx }
     }
 
-    fn var(&self, key: &str) -> Result<String, Error> {
-        match self.ctx.var(key) {
-            Ok(var) =>  Ok(var.to_string()),
-            Err(_) =>  Err(Error::EnvironmentVariableNotFound(key.to_string()))
-        }
-
-    }
-    fn header(&self, key:&str) -> Result<String, Error> {
-        match  self.req.headers().get(key) {
-            Ok(val) => val.ok_or_else(|| Error::HeaderNotFound(key.to_string())),
-            Err(_) => Err(Error::HeaderNotFound(key.to_string()))
-        }
-    }
-
-    async fn validate_signature(&mut self) -> Result<String, Error> {
-        let pubkey = self.var("DISCORD_PUBLIC_KEY")?;
-        let signature = self.header("x-signature-ed25519")?;
-        let timestamp = self.header("x-signature-timestamp")?;
-
-        let body = self.req.text().await.map_err(|_| Error::InvalidPayload("".into()))?;
-        verify_signature(&pubkey, &signature, &timestamp, &body).map_err(Error::VerificationFailed)?;
-        Ok(body)
-    }
-
-    pub async fn handle_request(&mut self) -> Result<InteractionResponse, Error> {
-        let body = self.validate_signature().await?;
+    pub async fn handle(&mut self, mut req: Request) -> Result<InteractionResponse, Error> {
+        let body = self.validate_signature(&mut req).await?;
         
-        let interaction = serde_json::from_str::<Interaction>(&body)
+        let interaction: Interaction = serde_json::from_str(&body)
             .map_err(Error::JsonFailed)?;
 
-        worker::console_log!{"Request parsed : {}", serde_json::to_string_pretty(&interaction).unwrap()};
         let response = interaction.perform(&mut self.ctx).await?;
         
         Ok(response)
-
     }
 
+    async fn validate_signature(&self, req: &mut Request) -> Result<String, Error> {
+        let pubkey = self.ctx.var("DISCORD_PUBLIC_KEY")
+            .map_err(|e| Error::EnvironmentVariableNotFound(e.to_string()))?
+            .to_string();
+        
+        let signature = req.headers().get("x-signature-ed25519")
+            .map_err(|e| Error::HeaderNotFound(e.to_string()))?
+            .ok_or_else(|| Error::HeaderNotFound("x-signature-ed25519".into()))?;
+        
+        let timestamp = req.headers().get("x-signature-timestamp")
+            .map_err(|e| Error::HeaderNotFound(e.to_string()))?
+            .ok_or_else(|| Error::HeaderNotFound("x-signature-timestamp".into()))?;
+
+        let body = req.text().await.map_err(|_| Error::InvalidPayload("Body read failed".into()))?;
+        
+        verify_signature(&pubkey, &signature, &timestamp, &body)
+            .map_err(|e| Error::VerificationFailed(e))?;
+            
+        Ok(body)
+    }
 }

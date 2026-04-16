@@ -2,7 +2,7 @@ use reqwest::Response;
 use worker::{Result, Date, Env, Request};
 use cfg_if::cfg_if;
 
-use crate::{CLIENT, COMMANDS, discord::{command::SerializableCommand, error::{Error, InteractionError}}};
+use crate::{CLIENT, COMMANDS, discord::command::SerializableCommand, error::{Error, InteractionError}};
 
 cfg_if! {
     // https://github.com/rustwasm/console_error_panic_hook#readme

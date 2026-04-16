@@ -33,23 +33,16 @@ use crate::{
 };
 
 #[derive(Default)]
-pub struct Hello;
+pub struct Update;
 
 #[async_trait(?Send)]
-impl Command for Hello {
+impl Command for Update {
     fn name(&self) -> String {
-        "hello".into()
+        "update".into()
     }
 
     fn description(&self) -> String {
-        "Saluta qualcuno nella chat!".into()
-    }
-
-    fn options(&self) -> Vec<CommandOption> {
-        vec![
-            create_option(CommandOptionType::User, "user", "L'utente da salutare")
-                .required(false)
-        ]
+        "Aggiorna i comandi del bot!".into()
     }
 
     async fn respond(
@@ -58,26 +51,20 @@ impl Command for Hello {
         data: &CommandData, 
         _ctx: &mut RouteContext<()>
     ) -> Result<InteractionResponse, InteractionError> {
-        let target_id = match data.get_option("user") {
-            Some(CommandOptionValue::User(user)) => Some(user.get()),
-            Some(_) | None => None
-        };
 
-        let message = match target_id {
-            Some(id) => format!("Ciao <@{}>! 👋", id),
-            None => {
-                let author = interaction.author()
-                    .ok_or(InteractionError::GenericError())?;
-                format!("Ciao <@{}>, come stai? 👋", author.id)
-            }
-        };
-
-        Ok(InteractionResponse {
-            kind: InteractionResponseType::ChannelMessageWithSource,
-            data: Some(InteractionResponseData {
-                content: Some(message),
-                ..Default::default()
-            }),
+        let response = utils::update_commands(&ctx.worker.env)
+            .await
+            .map_err(|_e| InteractionError::GenericError())?;
+        let status = response.status().as_u16();
+        
+        if let Err(e) = response.error_for_status() {
+            return Err(InteractionError::ReqwestError(e));
+        }
+        
+        Ok(InteractionApplicationCommandCallbackData {
+            content: Some(format!("✅ Aggiornamento comandi completato! Status: **{}**", status)),
+            flags: Some(MessageFlags::EPHEMERAL),
+            ..Default::default()
         })
     }
 }

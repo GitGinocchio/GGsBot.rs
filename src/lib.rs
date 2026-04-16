@@ -2,13 +2,12 @@ use std::sync::{LazyLock, atomic::{AtomicBool, Ordering}};
 use reqwest::Client;
 use worker::*;
 
+use crate::discord::{bot::Bot, command::CommandMap};
+
 mod utils;
-
-mod discord;
-use discord::bot;
-use crate::discord::command::CommandMap;
-
 mod commands;
+mod discord;
+mod error;
 
 static CLIENT: LazyLock<Client> = LazyLock::new(|| {
     Client::new()
@@ -16,10 +15,7 @@ static CLIENT: LazyLock<Client> = LazyLock::new(|| {
 
 static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| {
     build_commands!(
-        commands::hello::Hello,
-        commands::version::Version,
-        commands::update::Update,
-        commands::mods::Mods
+        commands::hello::Hello
     )
 });
 
@@ -41,9 +37,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 
     Router::new()
         .post_async("/api/interaction", |req, ctx|  async move {
-            let mut app = bot::Bot::new(req, ctx);
-
-             match app.handle_request().await {
+            match Bot::new(ctx).handle(req).await {
                 Ok(result) => {
                     worker::console_log!("Response : {}", serde_json::to_string_pretty(&result).unwrap());
                     Response::from_json(&result) 
@@ -53,7 +47,6 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
                     Response::error(httperr.to_string(), httperr.status_code())
                 }
             }
-
         })
         .run(req, env)
         .await

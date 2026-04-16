@@ -27,12 +27,15 @@ directory = "./dist"
 
 [vars]
 WORKER_ENV = "production"
+DISCORD_DEVELOPER_ID = "778017089230209045"
 
 [env.production.vars]
 WORKER_ENV = "production"
+DISCORD_DEVELOPER_ID = "778017089230209045"
 
 [env.local.vars]
 WORKER_ENV = "dev"
+DISCORD_DEVELOPER_ID = "778017089230209045"
 
 [version_metadata]
 binding = "metadata"
