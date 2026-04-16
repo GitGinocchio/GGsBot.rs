@@ -1,11 +1,10 @@
 use crate::discord::interaction::{
-    InteractionApplicationCommandCallbackData, 
-    ApplicationCommandOption, 
-    ApplicationCommandOptionChoice,
-    ApplicationCommandOptionType
+    InteractionApplicationCommandCallbackData
 };
 use crate::discord::error::InteractionError;
 use crate::discord::command::{Command, CommandContext};
+use crate::discord::locale::Localization;
+use crate::discord::option::{ApplicationCommandOption, ApplicationCommandOptionType};
 
 use async_trait::async_trait;
 
@@ -14,51 +13,30 @@ pub(crate) struct Hello {}
 
 #[async_trait(?Send)]
 impl Command for Hello {
-    async fn respond(&self, ctx: &CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError>{
-        let name = ctx.get_option("name").unwrap_or("World");
+    fn name(&self) -> Localization { "hello".into() }
+    fn description(&self) -> Localization { "Say Hello to someone on this server!".into() }
+
+    fn options(&self) -> Vec<ApplicationCommandOption> {
+        vec![ApplicationCommandOption{
+            name: "user".into(), 
+            autocomplete: Some(true),
+            description: "The user you want to greet".into(), 
+            required: Some(false), 
+            ty: ApplicationCommandOptionType::User,
+            ..Default::default()
+        }]
+    }
+
+    async fn respond(&self, ctx: &mut CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError>{
+        let maybe_user = ctx.get_option("user")
+            .map(|v| v.as_str())
+            .flatten()
+            .map(|s| format!("<@{}>", s))
+            .unwrap_or("World".into());
         
         Ok(InteractionApplicationCommandCallbackData {
-            content: Some(format!("Hello, {}!", name)),
+            content: Some(format!("Hello, {}!", maybe_user)),
             ..Default::default()
         })
-    }
-
-    fn name(&self) -> String{
-        "hello".into()
-    }
-
-    fn description(&self) -> String {
-        "Say Hello!".into()
-    }
-
-    fn options(&self) -> Option<Vec<ApplicationCommandOption>> {
-        Some(vec![ApplicationCommandOption{
-            name: "name".into(), 
-            autocomplete: Some(true), 
-            description: "Your name".into(), 
-            required: Some(false), 
-            ty: ApplicationCommandOptionType::String,
-            choices: None,
-        }])
-    }
-
-    async fn autocomplete(&self,  _ctx: &CommandContext) -> Result<Option<InteractionApplicationCommandCallbackData>, InteractionError> {
-        Ok(Some(InteractionApplicationCommandCallbackData {
-            content: None,
-            embeds: None,
-            choices: Some(vec![ApplicationCommandOptionChoice{
-                name: "Alice".into(),
-                value: "Alice".into(),
-            },
-            ApplicationCommandOptionChoice{
-                name: "Bob".into(),
-                value: "Bob".into(),
-            },
-            ApplicationCommandOptionChoice{
-                name: "Charlie".into(),
-                value: "Charlie".into(),
-            }]),
-            ..Default::default()
-        }))
     }
 }

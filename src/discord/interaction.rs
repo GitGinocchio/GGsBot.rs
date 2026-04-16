@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
@@ -6,7 +8,11 @@ use crate::discord::attachment::Attachment;
 use crate::discord::command::CommandContext;
 use crate::discord::error::{Error, InteractionError};
 use crate::discord::embed::Embed;
+use crate::discord::locale::Locale;
+use crate::discord::member::Member;
 use crate::discord::message::MessageFlags;
+use crate::discord::option::{ApplicationCommandOptionChoice, ApplicationCommandOptionType};
+use crate::discord::user::User;
 
 #[derive(Deserialize_repr, Serialize)]
 #[repr(u8)]
@@ -30,13 +36,20 @@ pub(crate) enum InteractionResponseType {
     AutoCompleteResult = 8
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub(crate) struct ApplicationCommandInteractionDataOption {
     pub(crate) name: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) name_localizations: Option<HashMap<Locale, String>>,
+
     #[serde(rename = "type")]
     pub(crate) ty: ApplicationCommandOptionType,
-    pub(crate) value: Option<String>,
-    pub(crate) focused: Option<bool>
+
+    pub(crate) value: Option<serde_json::Value>,
+    pub(crate) focused: Option<bool>,
+
+    pub(crate) options: Option<Vec<ApplicationCommandInteractionDataOption>>
 }
 
 #[derive(Deserialize, Serialize)]
@@ -68,32 +81,6 @@ pub(crate) struct InteractionApplicationCommandCallbackData {
     pub(crate) tts: Option<bool>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub(crate) struct User {
-    id: String,
-    username: String,
-    discriminator: String,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub(crate) struct Member {
-    user: Option<User>,
-    nick: Option<String>,
-    permissions: Option<String>
-}
-
-impl Member {
-    pub fn is_admin(&self) -> bool {
-        match &self.permissions {
-            Some(permissions) => {
-                let num = permissions.parse::<u64>().unwrap_or(0);
-                num & 8 == 8
-            },
-            None => false
-        }
-    }
-}
-
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Interaction {
     #[serde(rename = "type")]
@@ -104,35 +91,6 @@ pub(crate) struct Interaction {
     channel_id: Option<String>,
     user: Option<User>,
     member: Option<Member>,
-}
-
-#[derive(Serialize_repr, Deserialize_repr, Clone)]
-#[repr(u8)]
-/// https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-type
-pub(crate) enum ApplicationCommandOptionType {
-    SubCommand = 1,
-    SubCommandGroup = 2,
-    String = 3,
-
-}
-#[derive(Deserialize, Serialize, Clone)]
-/// https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-structure
-pub(crate) struct ApplicationCommandOption {
-    pub(crate) name: String,
-    pub(crate) description: String,
-    #[serde(rename = "type")]
-    pub(crate) ty: ApplicationCommandOptionType,
-    pub(crate) choices: Option<Vec<ApplicationCommandOptionChoice>>,
-    pub(crate) autocomplete: Option<bool>,
-    pub(crate) required: Option<bool>
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug)]
-/// https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-choice-structure
-pub(crate) struct ApplicationCommandOptionChoice {
-    pub(crate) name: String,
-    pub(crate) value: String
-
 }
 
 impl Interaction {
@@ -163,7 +121,7 @@ impl Interaction {
         let data = self.data().map_err(|_| InteractionError::GenericError())?;
 
         // Prepariamo il contesto
-        let command_input = CommandContext {
+        let mut command_input = CommandContext {
             options: data.options.clone(),
             guild_id: self.guild_id.clone(),
             channel_id: self.channel_id.clone(),
@@ -173,7 +131,7 @@ impl Interaction {
         };
 
         if let Some(command) = COMMANDS.get(data.name.as_str()) {
-            let response = command.respond(&command_input).await?;
+            let response = command.respond(&mut command_input).await?;
 
             Ok(InteractionResponse {
                 ty: InteractionResponseType::ChannelMessageWithSource,

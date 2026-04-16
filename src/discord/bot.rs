@@ -32,7 +32,7 @@ impl Bot {
         }
     }
 
-    async fn validate_sig(&mut self) -> Result<String, Error> {
+    async fn validate_signature(&mut self) -> Result<String, Error> {
         let pubkey = self.var("DISCORD_PUBLIC_KEY")?;
         let signature = self.header("x-signature-ed25519")?;
         let timestamp = self.header("x-signature-timestamp")?;
@@ -43,9 +43,7 @@ impl Bot {
     }
 
     pub async fn handle_request(&mut self) -> Result<InteractionResponse, Error> {
-        let body = self.validate_sig().await?;
-
-        worker::console_log!("Request body : {}", body);
+        let body = self.validate_signature().await?;
         
         let interaction = serde_json::from_str::<Interaction>(&body)
             .map_err(Error::JsonFailed)?;

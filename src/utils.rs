@@ -1,5 +1,5 @@
 use reqwest::Response;
-use worker::{Result, Date, Env, Request, console_log};
+use worker::{Result, Date, Env, Request};
 use cfg_if::cfg_if;
 
 use crate::{CLIENT, COMMANDS, discord::{command::SerializableCommand, error::{Error, InteractionError}}};
@@ -15,6 +15,24 @@ cfg_if! {
     }
 }
 
+#[macro_export]
+macro_rules! map {
+    () => {
+        std::collections::HashMap::new()
+    };
+
+    // Supporto standard: chiave => valore
+    ( $( $key:expr => $value:expr ),* $(,)? ) => {
+        {
+            let mut map = std::collections::HashMap::new();
+            $(
+                map.insert($key, $value);
+            )*
+            map
+        }
+    };
+}
+
 pub fn is_dev(env: &Env) -> bool {
     match env.var("WORKER_ENV") {
         Ok(v) => v.to_string() == "dev",
@@ -25,7 +43,7 @@ pub fn is_dev(env: &Env) -> bool {
 pub fn log_request(req: &Request) {
     let cf = req.cf();
 
-    console_log!(
+    worker::console_debug!(
         "{} - [{}], located at: {:?}, within: {}",
         Date::now().to_string(),
         req.path(),

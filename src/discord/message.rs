@@ -2,7 +2,11 @@ use bitflags::bitflags;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::discord::{attachment::Attachment, interaction::User};
+use crate::discord::{
+    attachment::Attachment,
+    user::User
+};
+
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

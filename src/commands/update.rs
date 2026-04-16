@@ -1,7 +1,9 @@
+use crate::discord::integration::ApplicationIntegrationType;
+use crate::discord::locale::Localization;
 use crate::utils;
 use crate::discord::interaction::InteractionApplicationCommandCallbackData;
 use crate::discord::error::InteractionError;
-use crate::discord::command::{ApplicationIntegrationType, Command, CommandContext};
+use crate::discord::command::{Command, CommandContext};
 use crate::discord::message::MessageFlags;
 
 use async_trait::async_trait;
@@ -11,14 +13,14 @@ pub(crate) struct Update {}
 
 #[async_trait(?Send)]
 impl Command for Update {
-    fn name(&self) -> String { "update".to_string() }
-    fn description(&self) -> String { "Aggiorna i comandi globali su Discord".to_string() }
+    fn name(&self) -> Localization { "update".into() }
+    fn description(&self) -> Localization { "Aggiorna i comandi globali su Discord".into() }
 
-    fn integration_types(&self) -> Option<Vec<ApplicationIntegrationType>> {
-        Some(vec![ApplicationIntegrationType::GuildInstall])
+    fn integration_types(&self) -> Vec<ApplicationIntegrationType> {
+        vec![ApplicationIntegrationType::GuildInstall]
     }
 
-    async fn respond(&self, ctx: &CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError> {
+    async fn respond(&self, ctx: &mut CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError> {
         if let Some(bail) = ctx.admin_or_bail() {
             return Ok(bail);
         }

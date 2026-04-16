@@ -1,33 +1,46 @@
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 
-use crate::{CLIENT, discord::{command::{Command, CommandContext}, error::InteractionError, interaction::{ApplicationCommandOption, ApplicationCommandOptionType, InteractionApplicationCommandCallbackData}, message::{Message, MessageFlags}}};
+use crate::{CLIENT, 
+    discord::{
+        command::{
+            Command, 
+            CommandContext
+        }, error::InteractionError, interaction::InteractionApplicationCommandCallbackData, locale::{Locale, Localization}, message::{
+            Message, 
+            MessageFlags
+        }, option::{ApplicationCommandOption, ApplicationCommandOptionType}
+    }, map
+};
 
 #[derive(Default)]
 pub(crate) struct Clear {}
 
 #[async_trait(?Send)]
 impl Command for Clear {
-    fn name(&self) -> String { "clear".to_string() }
-    fn description(&self) -> String { "Elimina un numero specificato di messaggi".to_string() }
+    fn name(&self) -> Localization { 
+        Localization::Map(map! {
+            Locale::EnglishUS => "clear".to_string(),
+            Locale::Italian => "pulisci".to_string()
+        })
+    }
+    fn description(&self) -> Localization { "Elimina un numero specificato di messaggi".into() }
 
-    fn options(&self) -> Option<Vec<ApplicationCommandOption>> {
-        Some(vec![
+    fn options(&self) -> Vec<ApplicationCommandOption> {
+        vec![
             ApplicationCommandOption {
                 name: "amount".into(),
                 description: "The amount of messages to delete".into(),
-                ty: ApplicationCommandOptionType::String,
-                choices: None,
-                autocomplete: None,
-                required: Some(false)
+                ty: ApplicationCommandOptionType::Integer,
+                required: Some(false),
+                ..Default::default()
             }
-        ])
+        ]
     }
 
-    async fn respond(&self, ctx: &CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError> {
-        let amount = ctx
-            .get_option("amount")
-            .map(|v| v.parse::<u64>().ok())
+    async fn respond(&self, ctx: &mut CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError> {
+        let amount = ctx.get_option("amount")
+            .map(|v| v.as_u64())
             .flatten()
             .unwrap_or(100)
             .clamp(2, 100);
@@ -44,7 +57,7 @@ impl Command for Clear {
             .map_err(|e| InteractionError::UpstreamError(e.to_string()))?
             .json()
             .await
-            .map_err(|e| InteractionError::GenericError())?;
+            .map_err(|_e| InteractionError::GenericError())?;
 
         let message_ids: Vec<&str> = messages.iter()
             .filter(|m| m.timestamp > Utc::now() - Duration::days(14))

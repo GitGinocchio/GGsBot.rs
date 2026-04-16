@@ -19,7 +19,7 @@ static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| {
         commands::hello::Hello,
         commands::version::Version,
         commands::update::Update,
-        commands::clear::Clear
+        commands::mods::Mods
     )
 });
 
@@ -34,6 +34,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
         if let Err(e) = utils::update_commands(&env).await {
             worker::console_log!("Errore registrazione iniziale: {:?}", e);
         } else {
+            worker::console_log!("Comandi aggiornati correttamente");
             INITIALIZED.store(true, Ordering::SeqCst);
         }
     }

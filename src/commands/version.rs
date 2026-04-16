@@ -1,7 +1,9 @@
 use crate::discord::interaction::{
     InteractionApplicationCommandCallbackData, 
 };
+use crate::discord::locale::{Locale, Localization};
 use crate::discord::message::MessageFlags;
+use crate::map;
 use crate::utils::is_dev;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -16,10 +18,15 @@ pub(crate) struct Version {}
 
 #[async_trait(?Send)]
 impl Command for Version {
-    fn name(&self) -> String { "version".into() }
-    fn description(&self) -> String { "Returns the bot version!".into() }
+    fn name(&self) -> Localization {
+        Localization::Map(map! {
+            Locale::EnglishUS => "version".to_string(),
+            Locale::Italian => "versione".to_string()
+        })
+    }
+    fn description(&self) -> Localization { "Returns the bot version!".into() }
 
-    async fn respond(&self, ctx: &CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError>{
+    async fn respond(&self, ctx: &mut CommandContext) -> Result<InteractionApplicationCommandCallbackData, InteractionError> {
         let metadata: WorkerVersionMetadata = ctx.worker.env.get_binding::<WorkerVersionMetadata>("metadata")?;
         let mut lines = Vec::new();
 
