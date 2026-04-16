@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-
+use serde::{Serialize, Serializer};
+use twilight_model::application::command::{Command as DiscordCommand, CommandOption, CommandOptionType, CommandType};
 use async_trait::async_trait;
 use twilight_model::{application::interaction::{Interaction, application_command::{CommandData, CommandOptionValue}}, http::interaction::InteractionResponse, id::Id};
 use worker::RouteContext;
@@ -64,9 +65,6 @@ pub trait Command {
     ) -> Result<InteractionResponse, InteractionError>;
 }
 
-use serde::{Serialize, Serializer};
-use twilight_model::application::command::{Command as DiscordCommand, CommandOption, CommandOptionType, CommandType};
-
 pub struct SerializableCommand<'a>(pub &'a dyn Command);
 
 impl<'a> Serialize for SerializableCommand<'a> {
@@ -125,6 +123,7 @@ impl<'a> Serialize for SerializableCommand<'a> {
 macro_rules! build_commands {
     ($($command_type:ty),*) => {
         {
+            #[allow(unused_mut)]
             let mut map: $crate::discord::command::CommandMap = std::collections::HashMap::new();
             $(
                 let cmd: Box<dyn $crate::discord::command::Command + Send + Sync> = 

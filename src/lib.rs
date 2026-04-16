@@ -8,6 +8,7 @@ mod utils;
 mod commands;
 mod discord;
 mod error;
+mod traits;
 
 static CLIENT: LazyLock<Client> = LazyLock::new(|| {
     Client::new()
@@ -37,7 +38,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
     }
 
     Router::new()
-        .post_async("/api/interaction", |req, ctx|  async move {
+        .post_async("/api/interaction", |req, ctx| async move {
             match Bot::new(ctx).handle(req).await {
                 Ok(result) => {
                     worker::console_log!("Response : {}", serde_json::to_string_pretty(&result).unwrap());
