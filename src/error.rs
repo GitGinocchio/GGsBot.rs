@@ -37,9 +37,11 @@ impl Error {
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum InteractionError {
     #[error("Error communicating with {0}")]
+    #[allow(dead_code)]
     UpstreamError(String),
 
     #[error("Command not found: {0}")]
+    #[allow(dead_code)]
     UnknownCommand(String),
 
     #[error("Something went wrong")]

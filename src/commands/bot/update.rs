@@ -1,35 +1,19 @@
 use async_trait::async_trait;
 use twilight_model::{
-    application::{
-        command::{
-            CommandOption, 
-            CommandOptionType
-        }, 
-        interaction::{
+    application::interaction::{
             Interaction, 
-            application_command::{
-                CommandData, 
-                CommandOptionValue
-            }
-        }
-    },
-    http::interaction::{
-        InteractionResponse, 
-        InteractionResponseType
-    },
+            application_command::CommandData
+        }, channel::message::MessageFlags, http::interaction::{
+        InteractionResponse, InteractionResponseData, InteractionResponseType 
+    }
 };
-use twilight_model::http::interaction::InteractionResponseData;
 use worker::RouteContext;
 
 use crate::{
     discord::{
-        command::{Command, CommandDataExt}, 
-        option::{
-            CommandOptionExt, 
-            create_option
-        }
+        command::Command, interaction::InteractionExt, 
     }, 
-    error::InteractionError
+    error::InteractionError, utils
 };
 
 #[derive(Default)]
@@ -48,11 +32,14 @@ impl Command for Update {
     async fn respond(
         &self, 
         interaction: &Interaction, 
-        data: &CommandData, 
-        _ctx: &mut RouteContext<()>
+        _data: &CommandData, 
+        ctx: &mut RouteContext<()>
     ) -> Result<InteractionResponse, InteractionError> {
+        if !interaction.is_dev(ctx) {
+            return Err(InteractionError::GenericError())
+        }
 
-        let response = utils::update_commands(&ctx.worker.env)
+        let response = utils::update_commands(&ctx.env)
             .await
             .map_err(|_e| InteractionError::GenericError())?;
         let status = response.status().as_u16();
@@ -60,11 +47,14 @@ impl Command for Update {
         if let Err(e) = response.error_for_status() {
             return Err(InteractionError::ReqwestError(e));
         }
-        
-        Ok(InteractionApplicationCommandCallbackData {
-            content: Some(format!("✅ Aggiornamento comandi completato! Status: **{}**", status)),
-            flags: Some(MessageFlags::EPHEMERAL),
-            ..Default::default()
+
+        Ok(InteractionResponse {
+            kind: InteractionResponseType::ChannelMessageWithSource,
+            data: Some(InteractionResponseData {
+                content: Some(format!("✅ Aggiornamento comandi completato! Status: **{}**", status)),
+                flags: Some(MessageFlags::EPHEMERAL),
+                ..Default::default()
+            }),
         })
     }
 }

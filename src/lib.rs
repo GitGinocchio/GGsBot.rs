@@ -15,7 +15,8 @@ static CLIENT: LazyLock<Client> = LazyLock::new(|| {
 
 static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| {
     build_commands!(
-        commands::hello::Hello
+        commands::hello::Hello,
+        commands::bot::Bot
     )
 });
 

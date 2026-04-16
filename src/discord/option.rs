@@ -2,7 +2,9 @@ use twilight_model::application::command::{CommandOption, CommandOptionChoice, C
 
 pub trait CommandOptionExt {
     fn required(self, required: bool) -> Self;
+    #[allow(dead_code)]
     fn autocomplete(self, autocomplete: bool) -> Self;
+    #[allow(dead_code)]
     fn add_choice(self, name: impl Into<String>, value: CommandOptionChoiceValue) -> Self;
 }
 

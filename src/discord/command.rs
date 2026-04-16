@@ -10,6 +10,8 @@ pub type CommandMap = HashMap<String, Box<dyn Command + Send + Sync>>;
 
 pub trait CommandDataExt {
     fn get_option(&self, name: &str) -> Option<&CommandOptionValue>;
+    fn get_subcommand_name(&self) -> Option<&str>;
+    fn get_subcommand_data(&self) -> Option<CommandData>;
 }
 
 impl CommandDataExt for CommandData {
@@ -18,6 +20,29 @@ impl CommandDataExt for CommandData {
             .iter()
             .find(|opt| opt.name == name)
             .map(|o| &o.value)
+    }
+
+    fn get_subcommand_name(&self) -> Option<&str> {
+        self.options.iter().find_map(|opt| {
+            match opt.value {
+                CommandOptionValue::SubCommand(_) | CommandOptionValue::SubCommandGroup(_) => {
+                    Some(opt.name.as_str())
+                }
+                _ => None,
+            }
+        })
+    }
+
+    fn get_subcommand_data(&self) -> Option<CommandData> {
+        self.options.iter().find_map(|opt| {
+            if let CommandOptionValue::SubCommand(sub_options) = &opt.value {
+                let mut sub_data = self.clone();
+                sub_data.options = sub_options.clone();
+                Some(sub_data)
+            } else {
+                None
+            }
+        })
     }
 }
 
@@ -87,6 +112,7 @@ impl<'a> Serialize for SerializableCommand<'a> {
             name_localizations: None,
             description_localizations: None,
             contexts: None,
+            #[allow(deprecated)]
             dm_permission: None,
             integration_types: None
         };
@@ -97,15 +123,14 @@ impl<'a> Serialize for SerializableCommand<'a> {
 
 #[macro_export]
 macro_rules! build_commands {
-    ($($cmd:ty),*) => {
+    ($($command_type:ty),*) => {
         {
-            use std::collections::HashMap;
-            use crate::discord::command::Command;
-
-            let mut map: CommandMap = HashMap::new();
+            let mut map: $crate::discord::command::CommandMap = std::collections::HashMap::new();
             $(
-                let cmd_obj = <$cmd>::default();
-                map.insert(cmd_obj.name(), Box::new(cmd_obj));
+                let cmd: Box<dyn $crate::discord::command::Command + Send + Sync> = 
+                    Box::new(<$command_type>::default()); 
+                
+                map.insert(cmd.name(), cmd);
             )*
             map
         }
