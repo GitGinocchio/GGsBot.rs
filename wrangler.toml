@@ -4,6 +4,10 @@ compatibility_date = "2026-04-14"
 
 main = "build/index.js"
 
+[[kv_namespaces]]
+binding = "ggsbot-kv"
+id = "c1c5302906b04ad1af9c6f87b80f1367"
+
 [observability]
 enabled = false
 head_sampling_rate = 1

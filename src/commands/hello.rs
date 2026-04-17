@@ -25,8 +25,7 @@ use crate::{
     discord::{
         command::{Command, CommandDataExt}, 
         option::{
-            CommandOptionExt, 
-            create_option
+            OptionBuilder
         }
     }, 
     error::InteractionError
@@ -47,8 +46,9 @@ impl Command for Hello {
 
     fn options(&self) -> Vec<CommandOption> {
         vec![
-            create_option(CommandOptionType::User, "user", "L'utente da salutare")
+            OptionBuilder::new(CommandOptionType::User, "user", "L'utente da salutare")
                 .required(false)
+                .build()
         ]
     }
 

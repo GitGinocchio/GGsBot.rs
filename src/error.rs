@@ -50,6 +50,9 @@ pub(crate) enum InteractionError {
     #[error("Cloudflare worker error: {0}")]
     WorkerError(#[from] worker::Error),
 
+    #[error("Cloudflare worker kv error: {0}")]
+    KvError(#[from] worker::KvError),
+
     #[error("Reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error)
 }

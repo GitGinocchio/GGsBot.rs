@@ -2,7 +2,10 @@ use async_trait::async_trait;
 use twilight_model::{application::interaction::{Interaction, application_command::CommandData}, http::interaction::InteractionResponse};
 use worker::RouteContext;
 
-use crate::{build_commands, commands::tempvc, discord::command::{Command, CommandDataExt, CommandMap}, error::InteractionError};
+use crate::{build_commands, discord::command::{Command, CommandDataExt, CommandMap}, error::InteractionError};
+
+mod setup;
+mod show;
 
 #[derive(Default)]
 pub(crate) struct Ext {
@@ -16,6 +19,8 @@ impl Command for Ext {
 
     fn subcommands(&self) -> CommandMap {
         build_commands![
+            setup::Setup,
+            show::Show
         ]
     }
 

@@ -51,7 +51,6 @@ impl CommandDataExt for CommandData {
 pub trait Command {
     fn name(&self) -> String;
     fn description(&self) -> String;
-    fn autocomplete(&self) -> Option<bool> { None }
     fn subcommands(&self) -> CommandMap { HashMap::new() }
 
     /// add any arguments/choices here, more info at https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-structure
@@ -63,6 +62,13 @@ pub trait Command {
         data: &CommandData,
         ctx: &mut RouteContext<()>
     ) -> Result<InteractionResponse, InteractionError>;
+
+    #[allow(unused_variables)]
+    async fn autocomplete(
+        &self, 
+        data: &CommandData, 
+        ctx: &mut RouteContext<()>
+    ) -> Result<Option<InteractionResponse>, InteractionError> { Ok(None) }
 }
 
 pub struct SerializableCommand<'a>(pub &'a dyn Command);
@@ -82,7 +88,7 @@ impl<'a> Serialize for SerializableCommand<'a> {
                     name: sub.name(),
                     description: sub.description(),
                     options: Some(sub.options()), 
-                    autocomplete: sub.autocomplete(),
+                    autocomplete: None,
                     channel_types: None,
                     choices: None,
                     description_localizations: None,

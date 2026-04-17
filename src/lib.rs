@@ -9,15 +9,24 @@ mod commands;
 mod discord;
 mod error;
 mod traits;
+mod structs;
+mod components;
+mod embeds;
+
 
 static CLIENT: LazyLock<Client> = LazyLock::new(|| {
     Client::new()
 });
 
+static COMPONENTS: LazyLock<()> = LazyLock::new(|| {
+    ()
+});
+
 static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| {
     build_commands!(
         commands::hello::Hello,
-        commands::bot::Bot
+        commands::bot::Bot,
+        commands::ext::Ext
     )
 });
 
