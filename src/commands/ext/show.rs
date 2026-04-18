@@ -6,9 +6,19 @@ use twilight_model::{application::{command::{CommandOption, CommandOptionChoiceV
 use worker::RouteContext;
 
 use crate::{
-    COMMANDS, commands::ext::REQUIRED_EXTENSIONS, discord::{
-        command::Command, embed::EmbedExt, response::ResponseBuilder
-    }, embeds::default::DEFAULT_EMBED, error::InteractionError, structs::config::extension::ExtensionConfig, traits::namespaces::InteractionKvExt, utils::capitalize
+    map,
+    COMMANDS, 
+    commands::ext::REQUIRED_EXTENSIONS, 
+    discord::{
+        command::Command, 
+        embed::EmbedExt, 
+        response::ResponseBuilder
+    }, 
+    embeds::default::DEFAULT_EMBED, 
+    error::InteractionError, 
+    structs::config::extension::ExtensionConfig, 
+    traits::namespaces::InteractionKvExt, 
+    utils::capitalize
 };
 
 #[derive(Default)]
@@ -28,7 +38,7 @@ impl Command for Show {
         ctx: &mut RouteContext<()>
     ) -> Result<InteractionResponse, InteractionError> {
         let guild_kv = interaction.guild_kv(ctx)?;
-        let extensions_list = guild_kv.list(Some("extensions".into()), Some(10), None)
+        let extensions_list = guild_kv.list(Some("extensions".into()), Some(COMMANDS.len() as u64), None)
             .await
             .map_err(|e| InteractionError::KvError(e))?;
 
@@ -39,21 +49,26 @@ impl Command for Show {
 
         worker::console_debug!("{extensions_keys:?}");
 
-        let extensions_config = guild_kv.get_bulk(&extensions_keys)
-            .await
-            .map_err(|e| InteractionError::KvError(e))?;
+        let extensions_config = if extensions_keys.len() > 0 {
+            guild_kv.get_bulk(&extensions_keys)
+                .await
+                .map_err(|e| InteractionError::KvError(e))?
+        } else {
+            map!()
+        };
 
         let status_map: HashMap<String, bool> = extensions_config
             .iter()
             .filter_map(|(key, maybe_val)| {
                 let ext_name = key.split(':').nth(5)?.to_string();
 
+                // TODO: capire perche' ritorna maybe_val: None anche se e' presente
                 if let Some(val) = maybe_val { 
                     let config: ExtensionConfig<Value> = serde_json::from_str(val).ok()?;
                     Some((ext_name, config.enabled))
                 }
                 else {
-                    Some((ext_name, false)) 
+                    Some((ext_name, true))
                 }
             })
             .collect();
@@ -65,8 +80,8 @@ impl Command for Show {
             configured_field.push_str(&format!(
                 "- *{}*: **{}**\n", 
                 capitalize(name),
-                if *status { "enabled"} else { "disabled"} )
-            )
+                if *status == true { "enabled" } else { "disabled" }
+            ))
         }
 
         let mut unused_field = String::new();

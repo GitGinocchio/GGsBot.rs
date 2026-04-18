@@ -36,6 +36,8 @@ impl Command for Teardown {
         vec![ext]
     }
 
+    // TODO: aggiungere un autocomplete per inserire solo i comandi che sono configurati attualmente
+
     async fn respond(
         &self, 
         interaction: &Interaction,
