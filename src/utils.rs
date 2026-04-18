@@ -52,6 +52,14 @@ pub fn log_request(req: &Request) {
     );
 }
 
+pub fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
+}
+
 pub async fn update_commands(env: &Env) -> Result<Response, Error> {
     let to_register: Vec<_> = COMMANDS.values()
         .map(|cmd| SerializableCommand(cmd.as_ref()))

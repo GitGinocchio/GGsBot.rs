@@ -1,11 +1,12 @@
 use std::sync::LazyLock;
 
-use crate::discord::embed::EmbedBuilder;
+use crate::{discord::embed::EmbedBuilder, embeds::default::DEFAULT_EMBED};
 
 
 
 pub static ERROR_EMBED: LazyLock<EmbedBuilder> = LazyLock::new(|| {
-    EmbedBuilder::new()
+    DEFAULT_EMBED
+        .clone()
         .color("#ff0000")
-        .author("", None::<String>, None)
+        .title("Error!")
 });

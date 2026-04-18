@@ -6,6 +6,7 @@ use crate::error::Error;
 
 
 #[async_trait(?Send)]
+#[allow(unused)]
 pub trait InteractiveComponent {
     // L'ID univoco che registri nella tua HashMap globale
     fn custom_id(&self) -> String;

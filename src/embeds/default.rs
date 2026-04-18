@@ -16,5 +16,4 @@ pub static DEFAULT_EMBED: LazyLock<EmbedBuilder> = LazyLock::new(|| {
             format!("Message sent from GGsBot!"), 
             Some(BOT_ICON_URL.into())
         )
-        .thumbnail(BOT_ICON_URL)
 });

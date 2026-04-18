@@ -1,11 +1,16 @@
 use async_trait::async_trait;
-use twilight_model::{application::interaction::{Interaction, application_command::CommandData}, http::interaction::InteractionResponse};
+use twilight_model::{application::interaction::{Interaction, application_command::CommandData}, guild::Permissions, http::interaction::InteractionResponse, oauth::ApplicationIntegrationType};
 use worker::RouteContext;
 
-use crate::{build_commands, discord::command::{Command, CommandDataExt, CommandMap}, error::InteractionError};
+use crate::{build_commands, discord::command::{Command, CommandDataExt, CommandMap}, error::InteractionError, handle_subcommands};
 
 mod setup;
+mod teardown;
+mod enable;
+mod disable;
 mod show;
+
+static REQUIRED_EXTENSIONS: &[&str] = &["ext", "bot"];
 
 #[derive(Default)]
 pub(crate) struct Ext {
@@ -17,27 +22,21 @@ impl Command for Ext {
 
     fn description(&self) -> String { "Gestisci i comandi del bot!".into() }
 
+    fn integration_types(&self) -> Vec<ApplicationIntegrationType> {
+        vec![ApplicationIntegrationType::GuildInstall]
+    }
+
+    fn default_member_permissions(&self) -> Option<Permissions> {
+        Some(Permissions::ADMINISTRATOR)
+    }
+
     fn subcommands(&self) -> CommandMap {
         build_commands![
             setup::Setup,
+            teardown::Teardown,
+            enable::Enable,
+            disable::Disable,
             show::Show
         ]
-    }
-
-    async fn respond(
-        &self, 
-        interaction: &Interaction,
-        data: &CommandData,
-        ctx: &mut RouteContext<()>
-    ) -> Result<InteractionResponse, InteractionError> {
-        let sub_name = data.get_subcommand_name().ok_or(InteractionError::GenericError())?;
-        let sub_data = data.get_subcommand_data().ok_or(InteractionError::GenericError())?;
-
-        let subs = self.subcommands();
-        if let Some(sub_cmd) = subs.get(sub_name) {
-            return sub_cmd.respond(interaction, &sub_data, ctx).await;
-        }
-
-        Err(InteractionError::GenericError())
     }
 }

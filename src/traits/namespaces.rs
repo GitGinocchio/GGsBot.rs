@@ -6,7 +6,9 @@ use crate::{error::InteractionError, structs::kv::NamespacedKv};
 pub static KV_BINDING: &'static str = "ggsbotkv";
 
 pub trait InteractionKvExt {
+    #[allow(unused)]
     fn user_kv(&self, ctx: &RouteContext<()>) -> Result<NamespacedKv, InteractionError>;
+    #[allow(unused)]
     fn guild_kv(&self, ctx: &RouteContext<()>) -> Result<NamespacedKv, InteractionError>;
 }
 
@@ -17,7 +19,7 @@ impl InteractionKvExt for Interaction {
         let store = ctx.env.kv(KV_BINDING)
             .map_err(|e| InteractionError::WorkerError(e))?;
             
-        Ok(NamespacedKv::new(store, format!("user:{}", user_id)))
+        Ok(NamespacedKv::new(store, format!("users:{}", user_id)))
     }
 
     fn guild_kv(&self, ctx: &RouteContext<()>) -> Result<NamespacedKv, InteractionError> {
@@ -28,6 +30,6 @@ impl InteractionKvExt for Interaction {
         let store = ctx.env.kv(KV_BINDING)
             .map_err(|e| InteractionError::WorkerError(e))?;
 
-        Ok(NamespacedKv::new(store, format!("guild:{}", guild_id)))
+        Ok(NamespacedKv::new(store, format!("guilds:{}", guild_id)))
     }
 }

@@ -2,7 +2,7 @@ use std::sync::{LazyLock, atomic::{AtomicBool, Ordering}};
 use reqwest::Client;
 use worker::*;
 
-use crate::discord::{bot::Bot, command::CommandMap};
+use crate::discord::{bot::Bot, command::{CommandMap, SerializableCommand}};
 
 mod utils;
 mod commands;
@@ -47,6 +47,13 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
     }
 
     Router::new()
+        .get_async("/api/commands", |_req, _ctx| async move {
+            let commands: Vec<_> = COMMANDS.values()
+                .map(|cmd| SerializableCommand(cmd.as_ref()))
+                .collect();
+
+            Response::from_json(&commands)
+        })
         .post_async("/api/interaction", |req, ctx| async move {
             match Bot::new(ctx).handle(req).await {
                 Ok(result) => {

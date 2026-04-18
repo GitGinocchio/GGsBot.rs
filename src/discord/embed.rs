@@ -3,6 +3,7 @@ use twilight_model::channel::message::embed::{
 };
 use crate::traits::color::IntoColor;
 
+#[allow(unused)]
 pub trait EmbedExt {
     fn new() -> Self;
     fn set_title(&mut self, title: impl Into<String>) -> &mut Self;
@@ -109,6 +110,7 @@ impl EmbedExt for Embed {
 #[derive(Clone)]
 pub struct EmbedBuilder(Embed);
 
+#[allow(unused)]
 impl EmbedBuilder {
     pub fn new() -> Self {
         Self(Embed {

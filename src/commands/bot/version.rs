@@ -11,9 +11,7 @@ use twilight_model::{
 use worker::{RouteContext, WorkerVersionMetadata};
 
 use crate::{
-    discord::{
-        command::Command, 
-    }, 
+    discord::{command::Command, response::ResponseBuilder}, 
     error::InteractionError, 
     utils::is_dev
 };
@@ -59,13 +57,9 @@ impl Command for Version {
 
         let message = lines.join("\n");
 
-        Ok(InteractionResponse {
-            kind: InteractionResponseType::ChannelMessageWithSource,
-            data: Some(InteractionResponseData {
-                content: Some(message),
-                flags: Some(MessageFlags::EPHEMERAL),
-                ..Default::default()
-            }),
-        })
+        Ok(ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
+            .content(message)
+            .ephemeral()
+            .build())
     }
 }

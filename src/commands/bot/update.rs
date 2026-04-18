@@ -3,7 +3,7 @@ use twilight_model::{
     application::interaction::{
             Interaction, 
             application_command::CommandData
-        }, channel::message::MessageFlags, http::interaction::{
+        }, channel::message::MessageFlags, guild::Permissions, http::interaction::{
         InteractionResponse, InteractionResponseData, InteractionResponseType 
     }
 };
@@ -11,7 +11,7 @@ use worker::RouteContext;
 
 use crate::{
     discord::{
-        command::Command, interaction::InteractionExt, 
+        command::Command, interaction::InteractionExt, response::ResponseBuilder, 
     }, 
     error::InteractionError, utils
 };
@@ -27,6 +27,10 @@ impl Command for Update {
 
     fn description(&self) -> String {
         "Aggiorna i comandi del bot!".into()
+    }
+
+    fn default_member_permissions(&self) -> Option<Permissions> {
+        Some(Permissions::ADMINISTRATOR)
     }
 
     async fn respond(
@@ -48,13 +52,9 @@ impl Command for Update {
             return Err(InteractionError::ReqwestError(e));
         }
 
-        Ok(InteractionResponse {
-            kind: InteractionResponseType::ChannelMessageWithSource,
-            data: Some(InteractionResponseData {
-                content: Some(format!("✅ Aggiornamento comandi completato! Status: **{}**", status)),
-                flags: Some(MessageFlags::EPHEMERAL),
-                ..Default::default()
-            }),
-        })
+        Ok(ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
+            .content(format!("✅ Aggiornamento comandi completato! Status: **{}**", status))
+            .ephemeral()
+            .build())
     }
 }

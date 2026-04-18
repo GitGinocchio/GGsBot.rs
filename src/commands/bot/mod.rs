@@ -23,21 +23,4 @@ impl Command for Bot {
             version::Version
         ]
     }
-
-    async fn respond(
-        &self, 
-        interaction: &Interaction,
-        data: &CommandData,
-        ctx: &mut RouteContext<()>
-    ) -> Result<InteractionResponse, InteractionError> {
-        let sub_name = data.get_subcommand_name().ok_or(InteractionError::GenericError())?;
-        let sub_data = data.get_subcommand_data().ok_or(InteractionError::GenericError())?;
-
-        let subs = self.subcommands();
-        if let Some(sub_cmd) = subs.get(sub_name) {
-            return sub_cmd.respond(interaction, &sub_data, ctx).await;
-        }
-
-        Err(InteractionError::GenericError())
-    }
 }

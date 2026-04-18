@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 use serde::{Serialize, Serializer};
-use twilight_model::application::command::{Command as DiscordCommand, CommandOption, CommandOptionType, CommandType};
+use twilight_model::{application::command::{Command as DiscordCommand, CommandOption, CommandOptionType, CommandType}, guild::Permissions, oauth::ApplicationIntegrationType};
 use async_trait::async_trait;
 use twilight_model::{application::interaction::{Interaction, application_command::{CommandData, CommandOptionValue}}, http::interaction::InteractionResponse, id::Id};
 use worker::RouteContext;
 
-use crate::error::InteractionError;
+use crate::{error::InteractionError, traits::command::CommandController};
+use crate::handle_subcommands;
 
 pub type CommandMap = HashMap<String, Box<dyn Command + Send + Sync>>;
 
@@ -56,12 +57,18 @@ pub trait Command {
     /// add any arguments/choices here, more info at https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-structure
     fn options(&self) -> Vec<CommandOption> { vec![] }
 
+    fn integration_types(&self) -> Vec<ApplicationIntegrationType> { vec![] }
+
+    fn default_member_permissions(&self) -> Option<Permissions> { None }
+    
     async fn respond(
         &self, 
         interaction: &Interaction,
         data: &CommandData,
         ctx: &mut RouteContext<()>
-    ) -> Result<InteractionResponse, InteractionError>;
+    ) -> Result<InteractionResponse, InteractionError> {
+        handle_subcommands!(self, data, interaction, ctx)
+    }
 
     #[allow(unused_variables)]
     async fn autocomplete(
@@ -69,6 +76,9 @@ pub trait Command {
         data: &CommandData, 
         ctx: &mut RouteContext<()>
     ) -> Result<Option<InteractionResponse>, InteractionError> { Ok(None) }
+
+    #[allow(unused)]
+    fn get_controller(&self) -> Option<&dyn CommandController> { None }
 }
 
 pub struct SerializableCommand<'a>(pub &'a dyn Command);
@@ -102,13 +112,15 @@ impl<'a> Serialize for SerializableCommand<'a> {
             }
         }
 
+        let itypes = self.0.integration_types();
+
         let discord_cmd = DiscordCommand {
             name: self.0.name(),
             description: self.0.description(),
             options: all_options,
             kind: CommandType::ChatInput,
             application_id: None,
-            default_member_permissions: None,
+            default_member_permissions: self.0.default_member_permissions(),
             guild_id: None,
             id: None,
             nsfw: None,
@@ -118,7 +130,7 @@ impl<'a> Serialize for SerializableCommand<'a> {
             contexts: None,
             #[allow(deprecated)]
             dm_permission: None,
-            integration_types: None
+            integration_types: if itypes.is_empty() { None } else { Some(itypes) }
         };
 
         discord_cmd.serialize(serializer)
@@ -138,6 +150,23 @@ macro_rules! build_commands {
                 map.insert(cmd.name(), cmd);
             )*
             map
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! handle_subcommands {
+    ($self:expr, $data:expr, $interaction:expr, $ctx:expr) => {
+        {
+            let sub_name = $data.get_subcommand_name().ok_or(InteractionError::GenericError())?;
+            let sub_data = $data.get_subcommand_data().ok_or(InteractionError::GenericError())?;
+
+            let subs = $self.subcommands();
+            if let Some(sub_cmd) = subs.get(sub_name) {
+                return sub_cmd.respond($interaction, &sub_data, $ctx).await;
+            }
+
+            Err(InteractionError::GenericError())
         }
     };
 }

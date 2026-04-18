@@ -18,6 +18,7 @@ impl NamespacedKv {
         format!("{}:{}", self.prefix, key)
     }
 
+    #[allow(unused)]
     pub async fn list(&self, prefix: Option<String>, limit: Option<u64>, cursor: Option<String>) -> Result<ListResponse, KvError> {
         let mut builder = self.store.list().prefix(format!("{}:{}", self.prefix, prefix.unwrap_or_default()));
         
@@ -27,6 +28,7 @@ impl NamespacedKv {
         builder.execute().await
     }
 
+    #[allow(unused)]
     pub async fn get(&self, key: &str) -> Result<Option<String>, KvError> {
         self.store
             .get(&self.format_key(key))
@@ -34,6 +36,7 @@ impl NamespacedKv {
             .await
     }
 
+    #[allow(unused)]
     pub async fn get_bulk(&self, keys: &[impl AsRef<str>]) -> Result<HashMap<String, Option<String>>, KvError> {
         let formatted_keys: Vec<String> = keys
             .iter()
@@ -46,6 +49,7 @@ impl NamespacedKv {
             .await
     }
 
+    #[allow(unused)]
     pub async fn put(&self, key: &str, value: impl Into<String>, ttl: Option<u64>) -> Result<(), KvError> {
         let mut builder = self.store.put(&self.format_key(key), value.into())?;
         
@@ -56,6 +60,7 @@ impl NamespacedKv {
         builder.execute().await
     }
 
+    #[allow(unused)]
     pub async fn put_bytes(&self, key: &str, bytes: &[u8], ttl: Option<u64>) -> Result<(), KvError> {
         let mut builder = self.store.put_bytes(&self.format_key(key), bytes)?;
 
@@ -66,6 +71,7 @@ impl NamespacedKv {
         builder.execute().await
     }
 
+    #[allow(unused)]
     pub async fn put_stream(&self, key: &str, stream: ReadableStream, ttl: Option<u64>) -> Result<(), KvError> {
         let mut builder = self.store.put_stream(&self.format_key(key), stream)?;
 
@@ -76,6 +82,7 @@ impl NamespacedKv {
         builder.execute().await
     }
 
+    #[allow(unused)]
     pub async fn delete(&self, key: &str) -> Result<(), KvError> {
         self.store.delete(&self.format_key(key)).await
     }

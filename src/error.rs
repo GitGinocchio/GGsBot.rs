@@ -53,6 +53,9 @@ pub(crate) enum InteractionError {
     #[error("Cloudflare worker kv error: {0}")]
     KvError(#[from] worker::KvError),
 
+    #[error("Cloudflare worker json error: {0}")]
+    JsonError(#[from] serde_json::Error),
+
     #[error("Reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error)
 }

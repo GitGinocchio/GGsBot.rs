@@ -2,6 +2,7 @@ use twilight_model::application::command::{
     CommandOption, CommandOptionChoice, CommandOptionChoiceValue, CommandOptionType
 };
 
+#[allow(unused)]
 pub trait CommandOptionExt {
     fn new(kind: CommandOptionType, name: impl Into<String>, desc: impl Into<String>) -> Self;
     fn set_required(&mut self, required: bool) -> &mut Self;
@@ -53,6 +54,7 @@ impl CommandOptionExt for CommandOption {
 #[derive(Clone)]
 pub struct OptionBuilder(CommandOption);
 
+#[allow(unused)]
 impl OptionBuilder {
     pub fn new(kind: CommandOptionType, name: impl Into<String>, desc: impl Into<String>) -> Self {
         Self(CommandOption {
