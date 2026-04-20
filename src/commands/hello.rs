@@ -18,21 +18,32 @@ use twilight_model::{
         InteractionResponseType
     },
 };
-use twilight_model::http::interaction::InteractionResponseData;
 use worker::RouteContext;
 
 use crate::{
     discord::{
         command::{Command, CommandDataExt}, 
-        option::{
-            OptionBuilder
-        }
+        option::OptionBuilder, 
+        response::ResponseBuilder
     }, 
-    error::InteractionError
+    error::InteractionError,
+    traits::{command::CommandController, page::Page}
 };
 
 #[derive(Default)]
 pub struct Hello;
+
+#[async_trait(?Send)]
+impl CommandController for Hello {
+    async fn on_setup(
+        &self, 
+        interaction: &Interaction, 
+        ctx: &mut RouteContext<()>
+    ) -> Option<Result<InteractionResponse, InteractionError>> {
+        let page = crate::pages::hello::HelloSetupPage::default();
+        Some(page.handle(interaction, ctx, None).await)
+    }
+}
 
 #[async_trait(?Send)]
 impl Command for Hello {
@@ -50,6 +61,10 @@ impl Command for Hello {
                 .required(false)
                 .build()
         ]
+    }
+
+    fn get_controller(&self) -> Option<&dyn CommandController> {
+        Some(self)
     }
 
     async fn respond(
@@ -72,12 +87,8 @@ impl Command for Hello {
             }
         };
 
-        Ok(InteractionResponse {
-            kind: InteractionResponseType::ChannelMessageWithSource,
-            data: Some(InteractionResponseData {
-                content: Some(message),
-                ..Default::default()
-            }),
-        })
+        Ok(ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
+            .content(message)
+            .build())
     }
 }

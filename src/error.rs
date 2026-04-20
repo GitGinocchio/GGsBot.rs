@@ -44,6 +44,10 @@ pub(crate) enum InteractionError {
     #[allow(dead_code)]
     UnknownCommand(String),
 
+    #[error("Component not found: {0}")]
+    #[allow(dead_code)]
+    UnknownComponent(String),
+
     #[error("Something went wrong")]
     GenericError(),
 

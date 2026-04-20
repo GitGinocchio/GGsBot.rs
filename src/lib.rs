@@ -2,7 +2,16 @@ use std::sync::{LazyLock, atomic::{AtomicBool, Ordering}};
 use reqwest::Client;
 use worker::*;
 
-use crate::discord::{bot::Bot, command::{CommandMap, SerializableCommand}};
+use crate::{
+    discord::{
+        bot::Bot, 
+        command::{
+            CommandMap, 
+            SerializableCommand
+        }, 
+    }, 
+    traits::page::PageMap
+};
 
 mod utils;
 mod commands;
@@ -12,23 +21,20 @@ mod traits;
 mod structs;
 mod components;
 mod embeds;
+mod pages;
 
 
-static CLIENT: LazyLock<Client> = LazyLock::new(|| {
-    Client::new()
-});
+static CLIENT: LazyLock<Client> = LazyLock::new(|| Client::new());
 
-static COMPONENTS: LazyLock<()> = LazyLock::new(|| {
-    ()
-});
+static PAGES: LazyLock<PageMap> = LazyLock::new(|| build_pages!(
+    pages::hello::HelloSetupPage
+));
 
-static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| {
-    build_commands!(
-        commands::hello::Hello,
-        commands::bot::Bot,
-        commands::ext::Ext
-    )
-});
+static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| build_commands!(
+    commands::hello::Hello,
+    commands::bot::Bot,
+    commands::ext::Ext
+));
 
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
