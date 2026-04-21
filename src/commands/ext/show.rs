@@ -15,7 +15,7 @@ use crate::{
         response::ResponseBuilder
     }, 
     embeds::default::DEFAULT_EMBED, 
-    error::InteractionError, 
+    error::Error, 
     structs::config::extension::ExtensionConfig, 
     traits::namespaces::InteractionKvExt, 
     utils::capitalize
@@ -36,11 +36,11 @@ impl Command for Show {
         interaction: &Interaction,
         _data: &CommandData,
         ctx: &mut RouteContext<()>
-    ) -> Result<InteractionResponse, InteractionError> {
+    ) -> Result<InteractionResponse, Error> {
         let guild_kv = interaction.guild_kv(ctx)?;
         let extensions_list = guild_kv.list(Some("extensions".into()), Some(COMMANDS.len() as u64), None)
             .await
-            .map_err(|e| InteractionError::KvError(e))?;
+            .map_err(|e| Error::KvError(e))?;
 
         let extensions_keys: Vec<String> = extensions_list.keys
             .into_iter()
@@ -52,7 +52,7 @@ impl Command for Show {
         let extensions_config = if extensions_keys.len() > 0 {
             guild_kv.get_bulk(&extensions_keys)
                 .await
-                .map_err(|e| InteractionError::KvError(e))?
+                .map_err(|e| Error::KvError(e))?
         } else {
             map!()
         };

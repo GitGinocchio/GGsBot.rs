@@ -12,7 +12,7 @@ use worker::{RouteContext, WorkerVersionMetadata};
 
 use crate::{
     discord::{command::Command, response::ResponseBuilder}, 
-    error::InteractionError, 
+    error::Error, 
     utils::is_dev
 };
 
@@ -34,7 +34,7 @@ impl Command for Version {
         _interaction: &Interaction, 
         _data: &CommandData, 
         ctx: &mut RouteContext<()>
-    ) -> Result<InteractionResponse, InteractionError> {
+    ) -> Result<InteractionResponse, Error> {
         let metadata: WorkerVersionMetadata = ctx.env.get_binding::<WorkerVersionMetadata>("metadata")?;
         let mut lines = Vec::new();
 

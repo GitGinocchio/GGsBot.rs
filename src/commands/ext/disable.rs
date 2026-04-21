@@ -18,7 +18,7 @@ use crate::{
         default::DEFAULT_EMBED, 
         error::ERROR_EMBED
     }, 
-    error::InteractionError, 
+    error::Error, 
     structs::config::extension::ExtensionConfig, 
     traits::namespaces::InteractionKvExt
 };
@@ -51,22 +51,22 @@ impl Command for Disable {
         interaction: &Interaction,
         data: &CommandData,
         ctx: &mut RouteContext<()>
-    ) -> Result<InteractionResponse, InteractionError> {
+    ) -> Result<InteractionResponse, Error> {
         let guild_kv = interaction.guild_kv(ctx)?;
         let ext = match data.get_option("extension") {
             Some(CommandOptionValue::String(ext)) => Ok(ext),
-            Some(_) | None => Err(InteractionError::GenericError())
+            Some(_) | None => Err(Error::InteractionFailed("Missing required option 'extension'".into()))
         }?;
 
         let mut response = InteractionResponse::new(InteractionResponseType::ChannelMessageWithSource);
         response.set_ephemeral();
 
         let key = format!("extensions:{ext}:config"); //guilds:{guild_id}:extensions:{ext_name}:config
-        let maybe_config = guild_kv.get(&key).await.map_err(|e| InteractionError::KvError(e))?;
+        let maybe_config = guild_kv.get(&key).await.map_err(|e| Error::KvError(e))?;
         
         let mut config: ExtensionConfig<serde_json::Value> = if let Some(serialized) = maybe_config {
             serde_json::from_str(&serialized)
-                .map_err(|e| InteractionError::JsonError(e))?
+                .map_err(|e| Error::JsonFailed(e))?
         } else {
             let embed = ERROR_EMBED.clone()
                 .description(format!("Extension {ext} is not configured for this server!"))
@@ -79,7 +79,7 @@ impl Command for Disable {
         let description = if config.enabled {
             config.set_enabled(false);
             let serialized = serde_json::to_string(&config) 
-                .map_err(|e| InteractionError::JsonError(e))?;
+                .map_err(|e| Error::JsonFailed(e))?;
             guild_kv.put(&key, serialized, None).await?;
             format!("Extension {ext} disabled successfully!")
         } else {

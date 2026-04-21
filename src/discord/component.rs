@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use twilight_model::{application::interaction::Interaction, channel::{ChannelType, message::{Component, EmojiReactionType, component::{ActionRow, Button, ButtonStyle, ComponentType, SelectDefaultValue, SelectMenu, SelectMenuOption, SelectMenuType}}}, http::interaction::InteractionResponse, id::{Id, marker::SkuMarker}};
 use worker::RouteContext;
 
-use crate::error::InteractionError;
+use crate::error::Error;
 
 #[async_trait(?Send)]
 #[allow(unused)]
@@ -16,7 +16,7 @@ pub trait CustomComponent {
         interaction: &Interaction, 
         ctx: &mut RouteContext<()>,
         target: String
-    ) -> Option<Result<InteractionResponse, InteractionError>> {
+    ) -> Option<Result<InteractionResponse, Error>> {
         None
     }
 

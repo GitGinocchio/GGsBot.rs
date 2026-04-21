@@ -26,8 +26,11 @@ use crate::{
         option::OptionBuilder, 
         response::ResponseBuilder
     }, 
-    error::InteractionError,
-    traits::{command::CommandController, page::Page}
+    error::Error,
+    traits::{
+        command::CommandController, 
+        ui::UiHandler
+    }
 };
 
 #[derive(Default)]
@@ -39,9 +42,9 @@ impl CommandController for Hello {
         &self, 
         interaction: &Interaction, 
         ctx: &mut RouteContext<()>
-    ) -> Option<Result<InteractionResponse, InteractionError>> {
-        let page = crate::pages::hello::HelloSetupPage::default();
-        Some(page.handle(interaction, ctx, None).await)
+    ) -> Option<Result<InteractionResponse, Error>> {
+        let page = crate::ui::hello::HelloUiHandler::default();
+        Some(Ok(page.render(0).await))
     }
 }
 
@@ -72,7 +75,7 @@ impl Command for Hello {
         interaction: &Interaction, 
         data: &CommandData, 
         _ctx: &mut RouteContext<()>
-    ) -> Result<InteractionResponse, InteractionError> {
+    ) -> Result<InteractionResponse, Error> {
         let target_id = match data.get_option("user") {
             Some(CommandOptionValue::User(user)) => Some(user.get()),
             Some(_) | None => None
@@ -82,7 +85,7 @@ impl Command for Hello {
             Some(id) => format!("Ciao <@{}>! 👋", id),
             None => {
                 let author = interaction.author()
-                    .ok_or(InteractionError::GenericError())?;
+                    .ok_or(Error::InteractionFailed("No author field present!".into()))?;
                 format!("Ciao <@{}>, come stai? 👋", author.id)
             }
         };

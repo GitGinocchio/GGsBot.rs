@@ -1,5 +1,15 @@
 use twilight_model::{application::command::CommandOptionChoice, channel::message::{AllowedMentions, Component, Embed, MessageFlags}, http::{attachment::Attachment, interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType}}, poll::Poll};
 
+#[derive(serde::Serialize, Default)]
+pub struct InteractionUpdateResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embeds: Option<Vec<Embed>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub components: Option<Vec<Component>>,
+}
+
 #[allow(unused)]
 pub trait InteractionResponseExt {
     fn new(kind: InteractionResponseType) -> Self;
@@ -15,6 +25,10 @@ pub trait InteractionResponseExt {
     fn set_custom_id(&mut self, id: impl Into<String>);
     fn set_title(&mut self, title: impl Into<String>);
     fn set_poll(&mut self, poll: Poll);
+
+    fn empty() -> InteractionResponse;
+
+    fn as_update(&self) -> InteractionUpdateResponse;
 }
 
 impl InteractionResponseExt for InteractionResponse {
@@ -22,6 +36,22 @@ impl InteractionResponseExt for InteractionResponse {
         Self {
             kind: kind,
             data: None
+        }
+    }
+
+    fn empty() -> InteractionResponse {
+        InteractionResponse::new(InteractionResponseType::ChannelMessageWithSource)
+    }
+
+    fn as_update(&self) -> InteractionUpdateResponse {
+        let Some(data) = self.data.clone() else {
+            return InteractionUpdateResponse::default();
+        };
+
+        InteractionUpdateResponse {
+            content: data.content,
+            embeds: data.embeds,
+            components: data.components,
         }
     }
 

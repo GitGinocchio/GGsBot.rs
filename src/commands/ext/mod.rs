@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use twilight_model::{application::interaction::{Interaction, application_command::CommandData}, guild::Permissions, http::interaction::InteractionResponse, oauth::ApplicationIntegrationType};
 use worker::RouteContext;
 
-use crate::{build_commands, discord::command::{Command, CommandDataExt, CommandMap}, error::InteractionError, handle_subcommands};
+use crate::{build_commands, discord::command::{Command, CommandDataExt, CommandMap}, error::Error, handle_subcommands};
 
 mod setup;
 mod teardown;

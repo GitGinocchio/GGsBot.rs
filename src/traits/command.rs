@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use twilight_model::{application::interaction::Interaction, http::interaction::InteractionResponse};
 use worker::RouteContext;
 
-use crate::error::InteractionError;
+use crate::error::Error;
 
 #[async_trait(?Send)]
 pub trait CommandController {
@@ -25,7 +25,7 @@ pub trait CommandController {
         &self, 
         interaction: &Interaction, 
         ctx: &mut RouteContext<()>
-    ) -> Option<Result<InteractionResponse, InteractionError>> {
+    ) -> Option<Result<InteractionResponse, Error>> {
         None
     }
 
@@ -52,7 +52,7 @@ pub trait CommandController {
         &self, 
         interaction: &Interaction, 
         ctx: &mut RouteContext<()>
-    ) -> Option<Result<InteractionResponse, InteractionError>> {
+    ) -> Option<Result<InteractionResponse, Error>> {
         None
     }
 }

@@ -11,32 +11,32 @@ use worker::RouteContext;
 
 use crate::error::Error;
 
-pub type PageMap = HashMap<String, Box<dyn Page + Send + Sync>>;
+pub type UiHandlerMap = HashMap<String, Box<dyn UiHandler + Send + Sync>>;
 
 #[async_trait(?Send)]
 #[allow(unused)]
-pub trait Page {
+pub trait UiHandler {
     fn id(&self) -> String;
 
     async fn handle(
         &self,
         interaction: &Interaction, 
         ctx: &mut RouteContext<()>,
-        maybe_target: Option<String>
+        target: String
     ) -> Result<InteractionResponse, Error>;
 }
 
 #[macro_export]
-macro_rules! build_pages {
+macro_rules! build_ui_handlers {
     ($($command_type:ty),*) => {
         {
             #[allow(unused_mut)]
-            let mut map: $crate::traits::page::PageMap = std::collections::HashMap::new();
+            let mut map: $crate::traits::ui::UiHandlerMap = std::collections::HashMap::new();
             $(
-                let page: Box<dyn $crate::traits::page::Page + Send + Sync> = 
+                let handler: Box<dyn $crate::traits::ui::UiHandler + Send + Sync> = 
                     Box::new(<$command_type>::default()); 
                 
-                map.insert(page.id(), page);
+                map.insert(handler.id(), handler);
             )*
             map
         }

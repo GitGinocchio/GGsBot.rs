@@ -10,7 +10,7 @@ use crate::{
         }, 
         option::{CommandOptionExt, OptionBuilder}, 
         response::InteractionResponseExt
-    }, embeds::{default::DEFAULT_EMBED, error::ERROR_EMBED}, error::InteractionError, traits::namespaces::InteractionKvExt
+    }, embeds::{default::DEFAULT_EMBED, error::ERROR_EMBED}, error::Error, traits::namespaces::InteractionKvExt
 };
 
 #[derive(Default)]
@@ -43,23 +43,23 @@ impl Command for Teardown {
         interaction: &Interaction,
         data: &CommandData,
         ctx: &mut RouteContext<()>
-    ) -> Result<InteractionResponse, InteractionError> {
+    ) -> Result<InteractionResponse, Error> {
         let guild_kv = interaction.guild_kv(ctx)?;
         let ext = match data.get_option("extension") {
             Some(CommandOptionValue::String(ext)) => Ok(ext),
-            Some(_) | None => Err(InteractionError::GenericError())
+            Some(_) | None => Err(Error::InteractionFailed("Missing required option 'extension'".into()))
         }?;
 
         let cmd_controller = match COMMANDS.get(ext) {
             Some(cmd) => Ok(cmd.get_controller()),
-            None => Err(InteractionError::UnknownCommand(format!("Extension {ext} not found!")))
+            None => Err(Error::InteractionFailed("Command has no CommandController trait!".into()))
         }?;
 
         let mut response = InteractionResponse::new(InteractionResponseType::ChannelMessageWithSource);
         response.set_ephemeral();
 
         let key = format!("extensions:{ext}:config"); //guilds:{guild_id}:extensions:{ext_name}:config
-        let config = guild_kv.get(&key).await.map_err(|e| InteractionError::KvError(e))?;
+        let config = guild_kv.get(&key).await.map_err(|e| Error::KvError(e))?;
         
         if config.is_none() {
             let embed = ERROR_EMBED.clone()
@@ -72,7 +72,7 @@ impl Command for Teardown {
 
         guild_kv.delete(&key)
             .await
-            .map_err(|e| InteractionError::KvError(e))?;
+            .map_err(|e| Error::KvError(e))?;
 
         if let Some(controller) = cmd_controller {
             if let Some(response) = controller.on_teardown(interaction, ctx).await {

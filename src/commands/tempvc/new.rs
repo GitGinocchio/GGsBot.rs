@@ -13,7 +13,7 @@ use crate::{
     discord::{
         command::Command, 
     }, 
-    error::InteractionError, 
+    error::Error, 
 };
 
 #[derive(Default)]
@@ -34,7 +34,7 @@ impl Command for New {
         _interaction: &Interaction, 
         _data: &CommandData, 
         _ctx: &mut RouteContext<()>
-    ) -> Result<InteractionResponse, InteractionError> {
+    ) -> Result<InteractionResponse, Error> {
         Ok(InteractionResponse {
             kind: InteractionResponseType::ChannelMessageWithSource,
             data: Some(InteractionResponseData {

@@ -13,7 +13,8 @@ use crate::{
     discord::{
         command::Command, interaction::InteractionExt, response::ResponseBuilder, 
     }, 
-    error::InteractionError, utils
+    error::Error, 
+    utils
 };
 
 #[derive(Default)]
@@ -38,18 +39,16 @@ impl Command for Update {
         interaction: &Interaction, 
         _data: &CommandData, 
         ctx: &mut RouteContext<()>
-    ) -> Result<InteractionResponse, InteractionError> {
+    ) -> Result<InteractionResponse, Error> {
         if !interaction.is_dev(ctx) {
-            return Err(InteractionError::GenericError())
+            return Err(Error::InteractionFailed("You must be a developer to use this command!".into()))
         }
 
-        let response = utils::update_commands(&ctx.env)
-            .await
-            .map_err(|_e| InteractionError::GenericError())?;
+        let response = utils::update_commands(&ctx.env).await?;
         let status = response.status().as_u16();
         
         if let Err(e) = response.error_for_status() {
-            return Err(InteractionError::ReqwestError(e));
+            return Err(Error::ReqwestError(e));
         }
 
         Ok(ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use twilight_model::{application::interaction::{Interaction, application_command::{CommandData, CommandOptionValue}}, http::interaction::InteractionResponse, id::Id};
 use worker::RouteContext;
 
-use crate::{error::InteractionError, traits::command::CommandController};
+use crate::{error::Error, traits::command::CommandController};
 use crate::handle_subcommands;
 
 pub type CommandMap = HashMap<String, Box<dyn Command + Send + Sync>>;
@@ -66,7 +66,7 @@ pub trait Command {
         interaction: &Interaction,
         data: &CommandData,
         ctx: &mut RouteContext<()>
-    ) -> Result<InteractionResponse, InteractionError> {
+    ) -> Result<InteractionResponse, Error> {
         handle_subcommands!(self, data, interaction, ctx)
     }
 
@@ -75,7 +75,7 @@ pub trait Command {
         &self, 
         data: &CommandData, 
         ctx: &mut RouteContext<()>
-    ) -> Result<Option<InteractionResponse>, InteractionError> { Ok(None) }
+    ) -> Result<Option<InteractionResponse>, Error> { Ok(None) }
 
     #[allow(unused)]
     fn get_controller(&self) -> Option<&dyn CommandController> { None }
@@ -158,15 +158,15 @@ macro_rules! build_commands {
 macro_rules! handle_subcommands {
     ($self:expr, $data:expr, $interaction:expr, $ctx:expr) => {
         {
-            let sub_name = $data.get_subcommand_name().ok_or(InteractionError::GenericError())?;
-            let sub_data = $data.get_subcommand_data().ok_or(InteractionError::GenericError())?;
+            let sub_name = $data.get_subcommand_name().ok_or(Error::Generic("Could not get subcommand_name".into()))?;
+            let sub_data = $data.get_subcommand_data().ok_or(Error::Generic("Could not get subcommand_data".into()))?;
 
             let subs = $self.subcommands();
             if let Some(sub_cmd) = subs.get(sub_name) {
                 return sub_cmd.respond($interaction, &sub_data, $ctx).await;
             }
 
-            Err(InteractionError::GenericError())
+            Err(Error::Generic("No response was created for this subcommand!".into()))
         }
     };
 }

@@ -1,19 +1,21 @@
 use async_trait::async_trait;
-use twilight_model::channel::message::{Component, component::{ActionRow, Button, ButtonStyle}};
+use twilight_model::channel::message::{Component, component::ButtonStyle};
 
-use crate::{discord::component::CustomComponent, error::Error};
+use crate::discord::component::CustomComponent;
 
 pub struct NavBar {
     parent_id: String,
-    page: u8
+    page: u8,
+    max_page: Option<u8>
 }
 
 #[allow(unused)]
 impl NavBar {
-    pub fn new(parent_id: impl Into<String>, start_page: Option<u8>) -> Self {
+    pub fn new(parent_id: impl Into<String>, start_page: Option<u8>, max_page: Option<u8>) -> Self {
         Self {
             parent_id: parent_id.into(),
-            page: start_page.unwrap_or(0)
+            page: start_page.unwrap_or(0),
+            max_page: max_page
         }
     }
 
@@ -38,6 +40,10 @@ impl NavBar {
         self.page = self.page + 1;
         self.page
     }
+
+    pub fn set_max_page(&mut self, max_page: Option<u8>) {
+        self.max_page = max_page
+    }
 }
 
 #[async_trait(?Send)]
@@ -55,7 +61,7 @@ impl CustomComponent for NavBar {
             None, 
             ButtonStyle::Secondary,
             None::<String>, 
-            false, 
+            if self.page == 0 { true } else { false }, 
             None
         ));
 
@@ -75,7 +81,7 @@ impl CustomComponent for NavBar {
             None, 
             ButtonStyle::Primary,
             None::<String>, 
-            false, 
+            if let Some(max) = self.max_page && self.page >= max { true } else { false }, 
             None
         ));
 

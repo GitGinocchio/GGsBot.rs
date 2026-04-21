@@ -39,7 +39,7 @@ impl Bot {
         let body = req.text().await.map_err(|_| Error::InvalidPayload("Body read failed".into()))?;
         
         verify_signature(&pubkey, &signature, &timestamp, &body)
-            .map_err(|e| Error::VerificationFailed(e))?;
+            .map_err(|e| Error::VerificationFailed(e.to_string()))?;
             
         Ok(body)
     }

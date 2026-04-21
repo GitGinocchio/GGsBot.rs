@@ -31,7 +31,7 @@ To add a new command simply implement the `Command` trait. For example to add a 
 use crate::interaction::{
     InteractionApplicationCommandCallbackData, ApplicationCommandOption, ApplicationCommandOptionChoice, ApplicationCommandOptionType
 };
-use crate::error::InteractionError;
+use crate::error::Error;
 use crate::command::{Command, CommandInput};
 
 use async_trait::async_trait;
@@ -41,7 +41,7 @@ pub(crate) struct Ping {}
 
 #[async_trait(?Send)]
 impl Command for Ping {
-    async fn respond(&self, _input: &CommandInput) -> Result<InteractionApplicationCommandCallbackData, InteractionError> {
+    async fn respond(&self, _input: &CommandInput) -> Result<InteractionApplicationCommandCallbackData, Error> {
         Ok(InteractionApplicationCommandCallbackData {
             content: Some("Pong".to_string()),
             choices: None,
@@ -62,7 +62,7 @@ impl Command for Ping {
         None
     }
 
-    async fn autocomplete(&self, _input: &CommandInput) -> Result<Option<InteractionApplicationCommandCallbackData>, InteractionError> {
+    async fn autocomplete(&self, _input: &CommandInput) -> Result<Option<InteractionApplicationCommandCallbackData>, Error> {
         None
     }
 }

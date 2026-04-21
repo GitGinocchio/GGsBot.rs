@@ -2,7 +2,7 @@ use reqwest::Response;
 use worker::{Result, Date, Env, Request};
 use cfg_if::cfg_if;
 
-use crate::{CLIENT, COMMANDS, discord::command::SerializableCommand, error::{Error, InteractionError}};
+use crate::{CLIENT, COMMANDS, discord::command::SerializableCommand, error::Error};
 
 cfg_if! {
     // https://github.com/rustwasm/console_error_panic_hook#readme
@@ -67,18 +67,18 @@ pub async fn update_commands(env: &Env) -> Result<Response, Error> {
 
     let app_id = env
         .var("DISCORD_APPLICATION_ID")
-        .map_err(|e| InteractionError::WorkerError(e))?
+        .map_err(|e| Error::EnvironmentVariableNotFound(e.to_string()))?
         .to_string();
 
     let token = env
         .var("DISCORD_TOKEN")
-        .map_err(|e| InteractionError::WorkerError(e))?
+        .map_err(|e| Error::EnvironmentVariableNotFound(e.to_string()))?
         .to_string();
 
     let url = format!("https://discord.com/api/v10/applications/{}/commands", app_id);
 
     let serialized_commands = serde_json::to_string(&to_register)
-        .map_err(|_e| InteractionError::GenericError())?;
+        .map_err(|e| Error::JsonFailed(e))?;
     worker::console_log!{"Sending  : {}", serialized_commands};
 
     CLIENT
@@ -88,5 +88,5 @@ pub async fn update_commands(env: &Env) -> Result<Response, Error> {
         .body(serialized_commands) 
         .send()
         .await
-        .map_err(|_e| Error::InteractionFailed(InteractionError::GenericError()))
+        .map_err(|e| Error::ReqwestError(e))
 }

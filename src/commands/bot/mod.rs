@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use twilight_model::{application::interaction::{Interaction, application_command::CommandData}, http::interaction::InteractionResponse};
 use worker::RouteContext;
 
-use crate::{build_commands, discord::command::{Command, CommandDataExt, CommandMap}, error::InteractionError};
+use crate::{build_commands, discord::command::{Command, CommandDataExt, CommandMap}, error::Error};
 
 pub mod update;
 pub mod version;

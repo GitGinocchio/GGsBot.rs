@@ -10,7 +10,9 @@ use crate::{
             SerializableCommand
         }, 
     }, 
-    traits::page::PageMap
+    traits::{
+        ui::UiHandlerMap
+    }
 };
 
 mod utils;
@@ -21,13 +23,13 @@ mod traits;
 mod structs;
 mod components;
 mod embeds;
-mod pages;
+mod ui;
 
 
 static CLIENT: LazyLock<Client> = LazyLock::new(|| Client::new());
 
-static PAGES: LazyLock<PageMap> = LazyLock::new(|| build_pages!(
-    pages::hello::HelloSetupPage
+static UIHANDLERS: LazyLock<UiHandlerMap> = LazyLock::new(|| build_ui_handlers!(
+    ui::hello::HelloUiHandler
 ));
 
 static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| build_commands!(
@@ -36,21 +38,10 @@ static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| build_commands!(
     commands::ext::Ext
 ));
 
-static INITIALIZED: AtomicBool = AtomicBool::new(false);
-
 #[event(fetch)]
 pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Response> {
     utils::log_request(&req);
     utils::set_panic_hook();
-
-    if !INITIALIZED.load(Ordering::SeqCst) {
-        if let Err(e) = utils::update_commands(&env).await {
-            worker::console_log!("Errore registrazione iniziale: {:?}", e);
-        } else {
-            worker::console_log!("Comandi aggiornati correttamente");
-            INITIALIZED.store(true, Ordering::SeqCst);
-        }
-    }
 
     Router::new()
         .get_async("/api/commands", |_req, _ctx| async move {
