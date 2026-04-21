@@ -25,6 +25,7 @@ pub trait InteractionExt {
     async fn delete(&self, ctx: &mut RouteContext<()>) -> Result<InteractionResponse, Error>;
     async fn edit(&self, response: &InteractionResponse) -> Result<InteractionResponse, Error>;
     async fn defer(&self) -> Result<(), Error>;
+    async fn followup(&self) -> Result<(), Error>;
 
     fn is_dev(&self, ctx: &mut RouteContext<()>) -> bool;
 }
@@ -149,6 +150,10 @@ impl InteractionExt for Interaction {
             let err_text = client_response.text().await.unwrap_or_default();
             Err(Error::UpstreamError(format!("Discord API error: {} - {}", status, err_text).into()))
         }
+    }
+
+    async fn followup(&self) -> Result<(), Error> {
+        unimplemented!()
     }
 
     async fn handle_command(&self, ctx: &mut RouteContext<()>) -> Result<InteractionResponse, Error> {
