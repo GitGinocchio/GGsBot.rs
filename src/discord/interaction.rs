@@ -70,6 +70,30 @@ impl InteractionExt for Interaction {
         unimplemented!()
     }
 
+    async fn handle_command(&self, ctx: &mut RouteContext<()>) -> Result<InteractionResponse, Error> {
+        let data = match self.data.as_ref() {
+            Some(InteractionData::ApplicationCommand(data)) => data,
+            _ => return Err(Error::InvalidPayload("Missing command data".into())),
+        };
+
+        if let Some(command) = COMMANDS.get(data.name.as_str()) {
+            command.respond(self, data, ctx).await
+        } else {
+            Err(Error::InvalidPayload(format!("Command '{}' not found", data.name)))
+        }
+    }
+
+    async fn perform(&self, ctx: &mut RouteContext<()>) -> Result<InteractionResponse, Error> {
+        match self.kind {
+            InteractionType::Ping => Ok(InteractionResponse { kind: InteractionResponseType::Pong, data: None }),
+            InteractionType::ApplicationCommandAutocomplete => self.handle_autocomplete(ctx).await,
+            InteractionType::MessageComponent => self.handle_component(ctx).await,
+            InteractionType::ApplicationCommand => self.handle_command(ctx).await,
+            InteractionType::ModalSubmit => self.handle_modal_submit(ctx).await,
+            _ => Err(Error::InvalidPayload("Interaction type not supported".into())),
+        }
+    }
+
     async fn defer(&self) -> Result<(), Error> {
         let url = format!(
             "https://discord.com/api/v10/interactions/{}/{}/callback",
@@ -154,30 +178,6 @@ impl InteractionExt for Interaction {
 
     async fn followup(&self) -> Result<(), Error> {
         unimplemented!()
-    }
-
-    async fn handle_command(&self, ctx: &mut RouteContext<()>) -> Result<InteractionResponse, Error> {
-        let data = match self.data.as_ref() {
-            Some(InteractionData::ApplicationCommand(data)) => data,
-            _ => return Err(Error::InvalidPayload("Missing command data".into())),
-        };
-
-        if let Some(command) = COMMANDS.get(data.name.as_str()) {
-            command.respond(self, data, ctx).await
-        } else {
-            Err(Error::InvalidPayload(format!("Command '{}' not found", data.name)))
-        }
-    }
-
-    async fn perform(&self, ctx: &mut RouteContext<()>) -> Result<InteractionResponse, Error> {
-        match self.kind {
-            InteractionType::Ping => Ok(InteractionResponse { kind: InteractionResponseType::Pong, data: None }),
-            InteractionType::ApplicationCommandAutocomplete => self.handle_autocomplete(ctx).await,
-            InteractionType::MessageComponent => self.handle_component(ctx).await,
-            InteractionType::ApplicationCommand => self.handle_command(ctx).await,
-            InteractionType::ModalSubmit => self.handle_modal_submit(ctx).await,
-            _ => Err(Error::InvalidPayload("Interaction type not supported".into())),
-        }
     }
 
     fn is_dev(&self, ctx: &mut RouteContext<()>) -> bool {
