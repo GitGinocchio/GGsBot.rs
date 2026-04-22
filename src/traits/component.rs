@@ -1,42 +1,24 @@
 use async_trait::async_trait;
-use twilight_model::{
-    application::interaction::Interaction, 
-    channel::{
-        ChannelType, 
-        message::{
-            Component, 
-            EmojiReactionType, 
-            component::{
-                ActionRow, 
-                Button, 
-                ButtonStyle, 
-                SelectDefaultValue, 
-                SelectMenu, 
-                SelectMenuOption, 
-                SelectMenuType
-            }
-        }
-    }, 
-    http::interaction::InteractionResponse, 
-    id::{
-        Id, 
-        marker::SkuMarker
-    }
-};
+use twilight_model::{application::interaction::Interaction, channel::{ChannelType, message::{Component, EmojiReactionType, component::{ActionRow, Button, ButtonStyle, ComponentType, SelectDefaultValue, SelectMenu, SelectMenuOption, SelectMenuType}}}, http::interaction::InteractionResponse, id::{Id, marker::SkuMarker}};
 use worker::RouteContext;
 
 use crate::error::Error;
+
 #[async_trait(?Send)]
 #[allow(unused)]
-pub trait Page {
+pub trait CustomComponent {
     fn id(&self) -> String;
+
+    fn build(&self) -> Component;
 
     async fn handle(
         &self,
         interaction: &Interaction, 
         ctx: &mut RouteContext<()>,
         target: String
-    ) -> Result<InteractionResponse, Error>;
+    ) -> Option<Result<InteractionResponse, Error>> {
+        None
+    }
 
     fn button(
         &self, 

@@ -14,7 +14,7 @@ use crate::{
         }, 
         response::InteractionResponseExt
     },
-    embeds::{
+    ui::embeds::{
         default::DEFAULT_EMBED, 
         error::ERROR_EMBED
     }, 

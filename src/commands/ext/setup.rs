@@ -10,7 +10,14 @@ use crate::{
         }, 
         option::{CommandOptionExt, OptionBuilder}, 
         response::InteractionResponseExt
-    }, embeds::{default::DEFAULT_EMBED, error::ERROR_EMBED}, error::Error, structs::config::extension::ExtensionConfig, traits::namespaces::InteractionKvExt
+    }, 
+    ui::embeds::{
+        default::DEFAULT_EMBED, 
+        error::ERROR_EMBED
+    }, 
+    error::Error, 
+    structs::config::extension::ExtensionConfig, 
+    traits::namespaces::InteractionKvExt
 };
 
 #[derive(Default)]

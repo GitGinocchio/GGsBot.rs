@@ -21,8 +21,6 @@ mod discord;
 mod error;
 mod traits;
 mod structs;
-mod components;
-mod embeds;
 mod ui;
 
 

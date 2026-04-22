@@ -14,7 +14,7 @@ use crate::{
         embed::EmbedExt, 
         response::ResponseBuilder
     }, 
-    embeds::default::DEFAULT_EMBED, 
+    ui::embeds::default::DEFAULT_EMBED, 
     error::Error, 
     structs::config::extension::ExtensionConfig, 
     traits::namespaces::InteractionKvExt, 

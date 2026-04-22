@@ -3,14 +3,16 @@ use twilight_model::{application::interaction::Interaction, http::interaction::{
 use worker::RouteContext;
 
 use crate::{
-    components::navbar::NavBar, 
+    ui::components::navbar::NavBar,
     discord::{
-        component::CustomComponent, 
         interaction::InteractionExt, 
         response::ResponseBuilder
     }, 
     error::Error,
-    traits::ui::UiHandler
+    traits::{
+        component::CustomComponent, 
+        ui::UiHandler
+    }
 };
 
 

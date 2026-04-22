@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use twilight_model::channel::message::{Component, component::ButtonStyle};
 
-use crate::discord::component::CustomComponent;
+use crate::traits::component::CustomComponent;
 
 pub struct NavBar {
     parent_id: String,

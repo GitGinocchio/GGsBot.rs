@@ -1,6 +1,9 @@
 use std::sync::LazyLock;
 
-use crate::{discord::embed::EmbedBuilder, embeds::default::DEFAULT_EMBED};
+use crate::{
+    discord::embed::EmbedBuilder, 
+    ui::embeds::default::DEFAULT_EMBED
+};
 
 
 
