@@ -3,7 +3,9 @@ use twilight_model::{application::{command::{CommandOption, CommandOptionChoiceV
 use worker::RouteContext;
 
 use crate::{
-    COMMANDS, commands::ext::REQUIRED_EXTENSIONS, discord::{
+    COMMANDS, 
+    commands::ext::REQUIRED_EXTENSIONS, 
+    discord::{
         command::{
             Command, 
             CommandDataExt

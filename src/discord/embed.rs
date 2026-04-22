@@ -1,19 +1,23 @@
 use twilight_model::channel::message::embed::{
-    Embed, EmbedAuthor, EmbedField, EmbedFooter, EmbedImage, EmbedThumbnail,
+    Embed, EmbedAuthor, EmbedField, EmbedFooter, EmbedImage, EmbedProvider, EmbedThumbnail, EmbedVideo
 };
 use crate::traits::color::IntoColor;
 
 #[allow(unused)]
 pub trait EmbedExt {
     fn new() -> Self;
+    fn set_type(&mut self, kind: impl Into<String>) -> &mut Self;
     fn set_title(&mut self, title: impl Into<String>) -> &mut Self;
     fn set_description(&mut self, description: impl Into<String>) -> &mut Self;
     fn set_color(&mut self, color: impl IntoColor) -> &mut Self;
     fn add_field(&mut self, name: impl Into<String>, value: impl Into<String>, inline: bool) -> &mut Self;
     fn set_footer(&mut self, text: impl Into<String>, icon_url: Option<String>) -> &mut Self;
+    fn set_provider(&mut self, name: impl Into<String>, url: Option<String>) -> &mut Self;
     fn set_thumbnail(&mut self, url: impl Into<String>) -> &mut Self;
     fn set_author(&mut self, name: impl Into<String>, icon_url: Option<String>, url: Option<String>) -> &mut Self;
+    fn set_url(&mut self, url: impl Into<String>) -> &mut Self;
     fn set_image(&mut self, url: impl Into<String>) -> &mut Self;
+    fn set_video(&mut self, url: impl Into<String>) -> &mut Self;
     fn set_timestamp(&mut self, timestamp: twilight_model::util::Timestamp) -> &mut Self;
 }
 
@@ -34,6 +38,11 @@ impl EmbedExt for Embed {
             url: None,
             video: None,
         }
+    }
+
+    fn set_type(&mut self, kind: impl Into<String>) -> &mut Self {
+        self.kind = kind.into();
+        self
     }
 
     fn set_title(&mut self, title: impl Into<String>) -> &mut Self {
@@ -91,12 +100,35 @@ impl EmbedExt for Embed {
         self
     }
 
+    fn set_url(&mut self, url: impl Into<String>) -> &mut Self {
+        self.url = Some(url.into());
+        self
+    }
+
     fn set_image(&mut self, url: impl Into<String>) -> &mut Self {
         self.image = Some(EmbedImage {
             url: url.into(),
             height: None,
             width: None,
             proxy_url: None,
+        });
+        self
+    }
+
+    fn set_video(&mut self, url: impl Into<String>) -> &mut Self {
+        self.video = Some(EmbedVideo {
+            height: None,
+            proxy_url: None,
+            url: Some(url.into()),
+            width: None
+        });
+        self
+    }
+
+    fn set_provider(&mut self, name: impl Into<String>, url: Option<String>) -> &mut Self {
+        self.provider = Some(EmbedProvider {
+            name: Some(name.into()),
+            url: url
         });
         self
     }

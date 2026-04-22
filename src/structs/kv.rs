@@ -15,6 +15,7 @@ impl NamespacedKv {
     }
 
     fn format_key(&self, key: &str) -> String {
+        if key.starts_with(&self.prefix) { return key.to_string(); }
         format!("{}:{}", self.prefix, key)
     }
 

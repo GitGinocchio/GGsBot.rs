@@ -40,6 +40,8 @@ impl Command for Update {
         _data: &CommandData, 
         ctx: &mut RouteContext<()>
     ) -> Result<InteractionResponse, Error> {
+        interaction.defer(true).await?;
+
         if !interaction.is_dev(ctx) {
             return Err(Error::InteractionFailed("You must be a developer to use this command!".into()))
         }
@@ -51,9 +53,11 @@ impl Command for Update {
             return Err(Error::ReqwestError(e));
         }
 
-        Ok(ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
+        let response = ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
             .content(format!("✅ Aggiornamento comandi completato! Status: **{}**", status))
             .ephemeral()
-            .build())
+            .build();
+
+        interaction.edit(&response).await
     }
 }

@@ -1,5 +1,5 @@
 use twilight_model::{application::interaction::Interaction, http::interaction::InteractionResponse};
-use worker::{Request, RouteContext};
+use worker::{Request, Response, RouteContext};
 
 use crate::{discord::{interaction::InteractionExt, verification::verify_signature}, error::Error};
 
@@ -12,15 +12,36 @@ impl Bot {
         Self { ctx }
     }
 
-    pub async fn handle(&mut self, mut req: Request) -> Result<InteractionResponse, Error> {
-        let body = self.validate_signature(&mut req).await?;
-        
-        let interaction: Interaction = serde_json::from_str(&body)
-            .map_err(Error::JsonFailed)?;
+    pub async fn handle(&mut self, mut req: Request) -> worker::Result<Response> {
+        let ray_id = req.headers().get("cf-ray")?
+            .unwrap_or_else(|| "unknown".to_string());
 
-        let response = interaction.perform(&mut self.ctx).await?;
+        let body = match self.validate_signature(&mut req).await {
+            Err(e) => return Response::from_json(&e.as_interaction(&ray_id)),
+            Ok(b) => b
+        };
         
-        Ok(response)
+        let interaction: Interaction = match serde_json::from_str(&body).map_err(Error::JsonFailed) {
+            Err(e) => return Response::from_json(&e.as_interaction(&ray_id)),
+            Ok(i) => i
+        };
+
+        worker::console_debug!("[RayID: {ray_id}] Interaction started");
+        match interaction.perform(&mut self.ctx).await {
+            Ok(response) => {
+                worker::console_log!("[RayID: {ray_id}] Response : {}", serde_json::to_string_pretty(&response).unwrap());
+                Response::from_json(&response)
+            },
+            Err(e) => {
+                worker::console_error!("[RayID: {ray_id}] Error: {e:?}");
+                let response = e.as_interaction(&ray_id);
+                match interaction.edit(&response).await {
+                    Ok(r) => return Response::from_json(&r),
+                    Err(e) => worker::console_warn!("[RayID: {ray_id}] Error (edit message): {e}")
+                }
+                Response::from_json(&response)
+            }
+        }
     }
 
     async fn validate_signature(&self, req: &mut Request) -> Result<String, Error> {

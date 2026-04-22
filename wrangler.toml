@@ -8,6 +8,11 @@ main = "build/index.js"
 binding = "ggsbotkv"
 id = "c1c5302906b04ad1af9c6f87b80f1367"
 
+[triggers]
+crons = [
+    "0 * * * *"
+]
+
 [observability]
 enabled = false
 head_sampling_rate = 1

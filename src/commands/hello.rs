@@ -36,6 +36,7 @@ use crate::{
 #[derive(Default)]
 pub struct Hello;
 
+/*
 #[async_trait(?Send)]
 impl CommandController for Hello {
     async fn on_setup(
@@ -47,6 +48,7 @@ impl CommandController for Hello {
         Some(Ok(page.render(0).await))
     }
 }
+*/
 
 #[async_trait(?Send)]
 impl Command for Hello {
@@ -64,10 +66,6 @@ impl Command for Hello {
                 .required(false)
                 .build()
         ]
-    }
-
-    fn get_controller(&self) -> Option<&dyn CommandController> {
-        Some(self)
     }
 
     async fn respond(

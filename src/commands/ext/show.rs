@@ -2,7 +2,18 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use serde_json::Value;
-use twilight_model::{application::{command::{CommandOption, CommandOptionChoiceValue, CommandOptionType}, interaction::{Interaction, application_command::CommandData}}, channel::message::Embed, http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType}};
+use twilight_model::{
+    application::{
+        interaction::{
+            Interaction, 
+            application_command::CommandData
+        }
+    },
+    http::interaction::{
+        InteractionResponse,
+        InteractionResponseType
+    }
+};
 use worker::RouteContext;
 
 use crate::{
@@ -47,8 +58,6 @@ impl Command for Show {
             .map(|k| k.name)
             .collect();
 
-        worker::console_debug!("{extensions_keys:?}");
-
         let extensions_config = if extensions_keys.len() > 0 {
             guild_kv.get_bulk(&extensions_keys)
                 .await
@@ -60,20 +69,17 @@ impl Command for Show {
         let status_map: HashMap<String, bool> = extensions_config
             .iter()
             .filter_map(|(key, maybe_val)| {
-                let ext_name = key.split(':').nth(5)?.to_string();
+                let ext_name = key.split(':').nth(3)?.to_string();
 
-                // TODO: capire perche' ritorna maybe_val: None anche se e' presente
                 if let Some(val) = maybe_val { 
                     let config: ExtensionConfig<Value> = serde_json::from_str(val).ok()?;
                     Some((ext_name, config.enabled))
                 }
                 else {
-                    Some((ext_name, true))
+                    None
                 }
             })
             .collect();
-
-        worker::console_debug!("{status_map:?}");
 
         let mut configured_field = String::new();
         for (name, status) in status_map.iter() {

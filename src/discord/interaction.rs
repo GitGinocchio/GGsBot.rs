@@ -10,7 +10,7 @@ use twilight_model::{
 };
 use worker::RouteContext;
 
-use crate::{CLIENT, COMMANDS, UIHANDLERS, discord::response::InteractionResponseExt, error::Error};
+use crate::{CLIENT, COMMANDS, UIHANDLERS, discord::response::{InteractionResponseExt, ResponseBuilder}, error::Error};
 
 #[async_trait(?Send)]
 #[allow(unused)]
@@ -24,7 +24,7 @@ pub trait InteractionExt {
 
     async fn delete(&self, ctx: &mut RouteContext<()>) -> Result<InteractionResponse, Error>;
     async fn edit(&self, response: &InteractionResponse) -> Result<InteractionResponse, Error>;
-    async fn defer(&self) -> Result<(), Error>;
+    async fn defer(&self, ephemeral: bool) -> Result<(), Error>;
     async fn followup(&self) -> Result<(), Error>;
 
     fn is_dev(&self, ctx: &mut RouteContext<()>) -> bool;
@@ -94,19 +94,24 @@ impl InteractionExt for Interaction {
         }
     }
 
-    async fn defer(&self) -> Result<(), Error> {
+    async fn defer(&self, ephemeral: bool) -> Result<(), Error> {
         let url = format!(
             "https://discord.com/api/v10/interactions/{}/{}/callback",
             self.id,
             self.token
         );
 
-        let body = json!({
-            "type": InteractionResponseType::DeferredUpdateMessage
-        });
+        let kind = if self.data.is_some() && self.message.is_some() {
+            InteractionResponseType::DeferredUpdateMessage
+        } else {
+            InteractionResponseType::DeferredChannelMessageWithSource
+        };
+
+        let mut response = ResponseBuilder::new(kind).build();
+        if ephemeral { response.set_ephemeral(); }
 
         let response = CLIENT.post(url)
-            .json(&body)
+            .json(&response)
             .send()
             .await
             .map_err(|e| Error::ReqwestError(e))?;

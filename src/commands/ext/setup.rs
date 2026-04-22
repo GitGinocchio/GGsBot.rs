@@ -87,6 +87,7 @@ impl Command for Setup {
         let serialized_config = serde_json::to_string(&default_config)
             .map_err(|e| Error::JsonFailed(e))?;
 
+        // TODO: spostare questo e fare in modo che venga eseguito dopo il setup
         guild_kv.put(&key, serialized_config, None)
             .await
             .map_err(|e| Error::KvError(e))?;
