@@ -54,6 +54,12 @@ pub(crate) enum Error {
     Generic(String)
 }
 
+impl From<Error> for worker::Error {
+    fn from(err: Error) -> Self {
+        worker::Error::from(err.to_string())
+    }
+}
+
 impl Error {
     pub fn status_code(&self) -> u16 {
         match self {

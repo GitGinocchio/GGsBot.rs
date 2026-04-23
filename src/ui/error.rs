@@ -34,8 +34,8 @@ impl HelloUiHandler {
 
 #[async_trait(?Send)]
 impl UiHandler for HelloUiHandler {
-    fn id(&self) -> String {
-        "hello".into()
+    fn id(&self) -> &str {
+        "hello"
     }
 
     async fn handle(

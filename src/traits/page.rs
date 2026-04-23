@@ -29,7 +29,7 @@ use crate::error::Error;
 #[async_trait(?Send)]
 #[allow(unused)]
 pub trait Page {
-    fn id(&self) -> String;
+    fn id(&self) -> &str;
 
     async fn handle(
         &self,
@@ -50,7 +50,7 @@ pub trait Page {
     ) -> Component {
         Component::Button(Button {
             id: None,
-            custom_id: Some(self.id() + ":" + &id.into()),
+            custom_id: Some(self.id().to_string() + ":" + &id.into()),
             emoji: emoji,
             disabled: disabled,
             label: label.map(|l| l.into()),
@@ -80,7 +80,7 @@ pub trait Page {
         Component::SelectMenu(SelectMenu {
             id: None,
             channel_types: channel_types,
-            custom_id: self.id() + ":" + &id.into(),
+            custom_id: self.id().to_string() + ":" + &id.into(),
             default_values: default_values,
             kind: kind,
             disabled: disabled,

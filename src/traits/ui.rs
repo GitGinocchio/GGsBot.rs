@@ -16,7 +16,7 @@ pub type UiHandlerMap = HashMap<String, Box<dyn UiHandler + Send + Sync>>;
 #[async_trait(?Send)]
 #[allow(unused)]
 pub trait UiHandler {
-    fn id(&self) -> String;
+    fn id(&self) -> &str;
 
     async fn handle(
         &self,
@@ -27,7 +27,7 @@ pub trait UiHandler {
 }
 
 #[macro_export]
-macro_rules! build_ui_handlers {
+macro_rules! build_uihandlers {
     ($($command_type:ty),*) => {
         {
             #[allow(unused_mut)]
@@ -36,7 +36,7 @@ macro_rules! build_ui_handlers {
                 let handler: Box<dyn $crate::traits::ui::UiHandler + Send + Sync> = 
                     Box::new(<$command_type>::default()); 
                 
-                map.insert(handler.id(), handler);
+                map.insert(handler.id().into(), handler);
             )*
             map
         }

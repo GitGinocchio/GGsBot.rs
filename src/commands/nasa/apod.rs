@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -14,7 +16,7 @@ use twilight_model::{
 use url::Url;
 use worker::RouteContext;
 
-use crate::{CLIENT, discord::{command::Command, embed::{EmbedBuilder, EmbedExt}, interaction::InteractionExt, response::ResponseBuilder}, error::Error};
+use crate::{CLIENT, discord::{command::Command, embed::{EmbedBuilder, EmbedExt}, interaction::InteractionExt, response::ResponseBuilder}, error::Error, services::apod::ApodService};
 
 const API_URL: &'static str = "https://api.nasa.gov/planetary/apod";
 
@@ -76,47 +78,8 @@ impl Command for Apod {
             .map_err(|e| Error::EnvironmentVariableNotFound(e.to_string()))?
             .to_string();
 
-        let response = CLIENT.get(format!("{}?api_key={}", API_URL, api_key))
-            .send()
-            .await
-            .map_err(|e| Error::ReqwestError(e))?
-            .text()
-            .await
-            .map_err(|e| Error::ReqwestError(e))?;
-
-        let response: ApodResponse = serde_json::from_str(&response)
-            .map_err(|e| Error::JsonFailed(e))?;
-
-        let mut embed = Embed::new();
-        embed.set_color("#4889D8");
-        embed.set_title(&response.title);
-        embed.set_description(response.explanation.replace(". ", ". \n\n"));
-        embed.set_footer(
-            "Resource provided by NASA APOD api", 
-            Some("https://api.nasa.gov/assets/img/favicons/favicon-192.png".into())
-        );
-
-        embed.set_author(
-            response.copyright.unwrap_or("NASA".into()), 
-            Some("https://api.nasa.gov/assets/img/favicons/favicon-192.png".into()), 
-            Some("https://nasa.gov".into())
-        );
-
-        if let Some(concepts) = response.concepts {
-            embed.add_field("Concepts", concepts.join(","), false);
-        }
-
-        match response.media_type { 
-            ApodMediaType::Video => {
-                let resource_url = convert_to_watch_url(&response.url).unwrap_or(response.url);
-                embed.set_url(&resource_url);
-                embed.set_video(&resource_url);
-            },
-            ApodMediaType::Image => {
-                embed.set_url(&response.url);
-                embed.set_image(&response.url);
-            }
-        };
+        let data = ApodService::fetch_data(&api_key).await?;
+        let embed = ApodService::build_embed(data);
 
         let response = ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
             .embeds(vec![embed])

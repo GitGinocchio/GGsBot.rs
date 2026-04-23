@@ -1,4 +1,4 @@
-use std::sync::{LazyLock, atomic::{AtomicBool, Ordering}};
+use std::sync::LazyLock;
 use reqwest::Client;
 use worker::*;
 
@@ -8,15 +8,17 @@ use crate::{
         command::{
             CommandMap, 
             SerializableCommand
-        }, 
+        }, scheduler::Scheduler, 
     }, 
     traits::{
-        ui::UiHandlerMap
+        trigger::TriggerMap, ui::UiHandlerMap
     }
 };
 
 mod utils;
 mod commands;
+mod services;
+mod triggers;
 mod discord;
 mod error;
 mod traits;
@@ -26,7 +28,7 @@ mod ui;
 
 static CLIENT: LazyLock<Client> = LazyLock::new(|| Client::new());
 
-static UIHANDLERS: LazyLock<UiHandlerMap> = LazyLock::new(|| build_ui_handlers!(
+static UIHANDLERS: LazyLock<UiHandlerMap> = LazyLock::new(|| build_uihandlers!(
     ui::hello::HelloUiHandler
 ));
 
@@ -37,9 +39,13 @@ static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| build_commands!(
     commands::ext::Ext
 ));
 
+static TRIGGERS: LazyLock<TriggerMap> = LazyLock::new(|| build_triggers!(
+    triggers::apod::ApodTrigger
+));
+
 #[event(scheduled)]
-pub async fn scheduled(_event: ScheduledEvent, _env: Env, _ctx: ScheduleContext) {
-    worker::console_debug!("scheduled event triggered!");
+pub async fn scheduled(event: ScheduledEvent, env: Env, ctx: ScheduleContext) {
+    Scheduler::new(env, ctx).schedule(event).await;
 }
 
 #[event(fetch)]
