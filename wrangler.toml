@@ -10,8 +10,22 @@ id = "c1c5302906b04ad1af9c6f87b80f1367"
 
 [triggers]
 crons = [
-    "0 * * * *"
+    "0 7 * * *"
 ]
+
+[[queues.producers]]
+binding = "APOD_QUEUE"
+queue = "ggsbotrs-apod-queue"
+#delivery_delay = 60
+
+[[queues.consumers]]
+queue = "ggsbotrs-apod-queue"
+max_batch_size = 5
+max_batch_timeout = 5
+max_retries = 5
+max_concurrency = 3
+retry_delay = 120
+#dead_letter_queue = "my-queue-dlq"
 
 [observability]
 enabled = false

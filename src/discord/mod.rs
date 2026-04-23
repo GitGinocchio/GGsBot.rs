@@ -6,4 +6,3 @@ pub mod option;
 pub mod embed;
 pub mod response;
 pub mod component;
-pub mod scheduler;

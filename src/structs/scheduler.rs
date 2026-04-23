@@ -1,6 +1,6 @@
 use worker::{Env, ScheduleContext, ScheduledEvent};
 
-use crate::TRIGGERS;
+use crate::{TRIGGERS, error::Error, traits::trigger::{CronSchedule, Trigger}};
 
 
 
@@ -8,6 +8,24 @@ use crate::TRIGGERS;
 pub struct Scheduler {
     env: Env,
     ctx: ScheduleContext
+}
+
+pub async fn can_run_trigger(
+    trigger: &Box<dyn Trigger + Send + Sync>, 
+    event: &ScheduledEvent, 
+    env: &Env, 
+    ctx: &ScheduleContext
+) -> Result<bool, Error> {
+    let current_cron = event.cron();
+    let cron_ok = match trigger.cron() {
+        CronSchedule::All => true,
+        CronSchedule::Single(pattern) => current_cron == pattern,
+        CronSchedule::Multiple(patterns) => patterns.contains(&current_cron.as_str()),
+    };
+
+    if !cron_ok { return Ok(false); }
+
+    trigger.should_run(event, env, ctx).await
 }
 
 impl Scheduler {
@@ -20,7 +38,7 @@ impl Scheduler {
         worker::console_log!("[ScheduledJob]: Batch started for cron expression '{}'", cron_id);
 
         for (name, trigger) in TRIGGERS.iter() {
-            match trigger.can_run(&event, &self.env, &self.ctx).await {
+            match can_run_trigger(&trigger, &event, &self.env, &self.ctx).await {
                 Ok(false) => {
                     worker::console_debug!("[ScheduledJob]: Skipping trigger '{}' (condition not met)", name);
                     continue;

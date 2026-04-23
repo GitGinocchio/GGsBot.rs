@@ -13,20 +13,21 @@ impl Trigger for ApodTrigger {
     }
 
     fn cron(&self) -> CronSchedule {
-        "0 * * * *".into()
+        "0 7 * * *".into()
+    }
+
+    async fn should_run(&self, event: &ScheduledEvent, env: &Env, ctx: &ScheduleContext) -> Result<bool, Error> {
+        Ok(true)
     }
 
     async fn execute(&self, event: &ScheduledEvent, env: &Env, ctx: &ScheduleContext) -> Result<(), Error> {
-        worker::console_debug!("Trigger named '{}' called with event: {:?}", self.name(), event);
-
         let api_key = env.var("NASA_API_KEY")
             .map_err(|e| Error::EnvironmentVariableNotFound(e.to_string()))?
             .to_string();
 
-        let data = ApodService::fetch_data(&api_key).await?;
-        let embed = ApodService::build_embed(data);
+        let apod_data = ApodService::fetch_apod_with_retries(&api_key, 3).await?;
 
-        worker::console_debug!("Apod embed: {embed:?}");
+        worker::console_debug!("{apod_data:?}");
 
         Ok(())
     }

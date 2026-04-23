@@ -8,10 +8,13 @@ use crate::{
         command::{
             CommandMap, 
             SerializableCommand
-        }, scheduler::Scheduler, 
+        },
     }, 
+    structs::{
+        queue::QueueProcessor, scheduler::Scheduler 
+    },
     traits::{
-        trigger::TriggerMap, ui::UiHandlerMap
+        queue::QueueMap, trigger::TriggerMap, ui::UiHandlerMap
     }
 };
 
@@ -19,6 +22,7 @@ mod utils;
 mod commands;
 mod services;
 mod triggers;
+mod queues;
 mod discord;
 mod error;
 mod traits;
@@ -42,6 +46,15 @@ static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| build_commands!(
 static TRIGGERS: LazyLock<TriggerMap> = LazyLock::new(|| build_triggers!(
     triggers::apod::ApodTrigger
 ));
+
+static QUEUES: LazyLock<QueueMap> = LazyLock::new(|| build_queue_handlers!(
+
+));
+
+#[event(queue)]
+pub async fn on_queue(batch: MessageBatch<serde_json::Value>, env: Env, ctx: Context) -> Result<()> {
+    QueueProcessor::new(env, ctx).process(batch).await
+}
 
 #[event(scheduled)]
 pub async fn scheduled(event: ScheduledEvent, env: Env, ctx: ScheduleContext) {

@@ -44,6 +44,21 @@ fn convert_to_watch_url(nasa_embed_url: &str) -> Option<String> {
 pub struct ApodService;
 
 impl ApodService {
+    pub async fn fetch_apod_with_retries(api_key: &str, max_attempts: u32) -> Result<ApodResponse, Error> {
+        let mut attempts = 0;
+        while attempts < max_attempts {
+            match ApodService::fetch_data(api_key).await {
+                Ok(data) => return Ok(data),
+                Err(e) => {
+                    attempts += 1;
+                    worker::console_warn!("Tentativo {} fallito: {:?}. Riprovo...", attempts, e);
+                    worker::Delay::from(Duration::from_secs(5 * attempts as u64)).await;
+                }
+            }
+        }
+        Err(Error::Generic("NASA API irraggiungibile dopo N tentativi".into()))
+    }
+
     pub async fn fetch_data(api_key: &str) -> Result<ApodResponse, Error> {
         let response = CLIENT.get(format!("{}?api_key={}", API_URL, api_key))
             .timeout(Duration::from_secs(15))

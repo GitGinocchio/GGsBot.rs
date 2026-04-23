@@ -55,14 +55,8 @@ pub trait Trigger {
 
     fn cron(&self) -> CronSchedule { CronSchedule::All }
 
-    async fn can_run(&self, event: &ScheduledEvent, env: &Env, ctx: &ScheduleContext) -> Result<bool, Error> {
-        let current_cron = event.cron();
-        
-        match self.cron() {
-            CronSchedule::All => Ok(true),
-            CronSchedule::Single(pattern) => Ok(current_cron == pattern),
-            CronSchedule::Multiple(patterns) => Ok(patterns.contains(&current_cron.as_str())),
-        }
+    async fn should_run(&self, _event: &ScheduledEvent, _env: &Env, _ctx: &ScheduleContext) -> Result<bool, Error> {
+        Ok(true)
     }
 
     async fn execute(&self, event: &ScheduledEvent, env: &Env, ctx: &ScheduleContext) -> Result<(), Error>;
