@@ -1,8 +1,24 @@
+use serde::Serialize;
 use serde_json::Value;
+use twilight_model::{channel::Message, http::interaction::{InteractionResponse, InteractionResponseData}};
 use worker::Env;
 
 use crate::{CLIENT, error::Error};
 
+#[derive(Serialize, Default, Debug)]
+pub struct DiscordMessagePayload {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embeds: Option<Vec<Value>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub components: Option<Vec<Value>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tts: Option<bool>,
+}
 
 #[allow(unused)]
 pub struct DiscordService {
@@ -19,7 +35,7 @@ impl DiscordService {
         unimplemented!()
     }
 
-    pub async fn send_guild_message(&self, channel_id: &str, payload: &Value) -> Result<(), Error> {
+    pub async fn send_guild_message(&self, channel_id: &str, payload: &DiscordMessagePayload) -> Result<(), Error> {
         let token = self.env.var("DISCORD_TOKEN")?
             .to_string();
 

@@ -2,10 +2,10 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use worker::{Context, Env, MessageBatch, MessageExt};
 
-use crate::{error::Error, framework::traits::queue::Queue, services::{apod::ApodService, discord::DiscordService}};
+use crate::{error::Error, framework::traits::queue::Queue, services::{apod::ApodService, discord::{DiscordMessagePayload, DiscordService}}};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Message {
+pub struct ApodQueueMessage {
     pub channel_id: String,
     pub guild_id: String
 }
@@ -33,7 +33,7 @@ impl Queue for ApodQueue {
         let apod_embed_value = serde_json::to_value(&apod_embed)?;
 
         for message in batch.messages()? {
-            let msg_data: Message = match serde_json::from_value(message.body().clone()) {
+            let msg_data: ApodQueueMessage = match serde_json::from_value(message.body().clone()) {
                 Ok(m) => m,
                 Err(e) => {
                     worker::console_error!("Errore deserializzazione messaggio: {:?}", e);
@@ -42,7 +42,12 @@ impl Queue for ApodQueue {
                 }
             };
 
-            match discord_service.send_guild_message(&msg_data.channel_id, &apod_embed_value).await {
+            let payload = DiscordMessagePayload {
+                embeds: Some(vec![apod_embed_value.clone()]),
+                ..Default::default()
+            };
+
+            match discord_service.send_guild_message(&msg_data.channel_id, &payload).await {
                 Ok(_) => {
                     message.ack();
                 },
