@@ -1,0 +1,9 @@
+# Raggruppa gli import in base alla loro provenienza (Standard, Esterni, Crate locale)
+group_imports = "StdExternalCrate"
+
+# 'Crate' prova a raggruppare gli import per ogni crate, 
+# ma tende ad appiattirli per leggibilità.
+imports_granularity = "One"
+
+# Forza l'uso di import tra parentesi graffe quando possibile
+imports_layout = "Mixed"

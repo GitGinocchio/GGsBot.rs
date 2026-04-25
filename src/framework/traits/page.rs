@@ -1,0 +1,92 @@
+use async_trait::async_trait;
+use twilight_model::{
+    application::interaction::Interaction,
+    channel::{
+        ChannelType,
+        message::{
+            Component, EmojiReactionType,
+            component::{
+                ActionRow, Button, ButtonStyle, SelectDefaultValue, SelectMenu, SelectMenuOption,
+                SelectMenuType,
+            },
+        },
+    },
+    http::interaction::InteractionResponse,
+    id::{Id, marker::SkuMarker},
+};
+use worker::RouteContext;
+
+use crate::{error::Error, framework::discord::response::InteractionResponseExt};
+#[async_trait(?Send)]
+#[allow(unused)]
+pub trait Page {
+    fn id(&self) -> String;
+
+    async fn render(&self) -> Result<InteractionResponse, Error>;
+
+    async fn handle(
+        &self,
+        interaction: &Interaction,
+        ctx: &mut RouteContext<()>,
+        target: String,
+    ) -> Result<InteractionResponse, Error> {
+        Ok(InteractionResponse::empty())
+    }
+
+    fn button(
+        &self,
+        id: impl Into<String>,
+        label: Option<impl Into<String>>,
+        emoji: Option<EmojiReactionType>,
+        style: ButtonStyle,
+        url: Option<impl Into<String>>,
+        disabled: bool,
+        sku_id: Option<Id<SkuMarker>>,
+    ) -> Component {
+        Component::Button(Button {
+            id: None,
+            custom_id: Some(self.id().to_string() + ":" + &id.into()),
+            emoji: emoji,
+            disabled: disabled,
+            label: label.map(|l| l.into()),
+            style: style,
+            url: url.map(|u| u.into()),
+            sku_id: sku_id,
+        })
+    }
+
+    fn action_row(&self, components: Vec<Component>) -> Component {
+        Component::ActionRow(ActionRow {
+            id: None,
+            components: components,
+        })
+    }
+
+    fn select_menu(
+        &self,
+        id: impl Into<String>,
+        kind: SelectMenuType,
+        disabled: bool,
+        placeholder: Option<String>,
+        options: Option<Vec<SelectMenuOption>>,
+        default_values: Option<Vec<SelectDefaultValue>>,
+        max_values: Option<u8>,
+        min_values: Option<u8>,
+        required: Option<bool>,
+        channel_types: Option<Vec<ChannelType>>,
+    ) -> Component {
+        Component::SelectMenu(SelectMenu {
+            id: None,
+            channel_types: channel_types,
+            custom_id: self.id().to_string() + ":" + &id.into(),
+            default_values: default_values,
+            kind: kind,
+            disabled: disabled,
+            max_values: max_values,
+            min_values: min_values,
+            options: options,
+            placeholder: placeholder,
+            required: required,
+        })
+    }
+}

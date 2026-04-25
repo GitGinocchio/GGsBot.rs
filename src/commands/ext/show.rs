@@ -3,63 +3,57 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use serde_json::Value;
 use twilight_model::{
-    application::{
-        interaction::{
-            Interaction, 
-            application_command::CommandData
-        }
-    },
-    http::interaction::{
-        InteractionResponse,
-        InteractionResponseType
-    }
+    application::interaction::{Interaction, application_command::CommandData},
+    http::interaction::{InteractionResponse, InteractionResponseType},
 };
 use worker::RouteContext;
 
 use crate::{
+    COMMANDS,
+    commands::ext::REQUIRED_EXTENSIONS,
+    error::Error,
+    framework::discord::{command::Command, embed::EmbedExt, response::ResponseBuilder},
+    framework::structs::config::extension::ExtensionConfig,
+    framework::traits::namespaces::KvExt,
     map,
-    COMMANDS, 
-    commands::ext::REQUIRED_EXTENSIONS, 
-    discord::{
-        command::Command, 
-        embed::EmbedExt, 
-        response::ResponseBuilder
-    }, 
-    ui::embeds::default::DEFAULT_EMBED, 
-    error::Error, 
-    structs::config::extension::ExtensionConfig, 
-    traits::namespaces::InteractionKvExt, 
-    utils::capitalize
+    ui::embeds::default::DEFAULT_EMBED,
+    utils::capitalize,
 };
 
 #[derive(Default)]
-pub(crate) struct Show {
-}
+pub(crate) struct Show;
 
 #[async_trait(?Send)]
 impl Command for Show {
-    fn name(&self) -> String { "show".into() }
+    fn name(&self) -> String {
+        "show".into()
+    }
 
-    fn description(&self) -> String { "Mostra le estensioni abilitate/disabilitate o disponibili!".into() }
+    fn description(&self) -> String {
+        "Mostra le estensioni abilitate/disabilitate o disponibili!".into()
+    }
 
     async fn respond(
-        &self, 
+        &self,
         interaction: &Interaction,
         _data: &CommandData,
-        ctx: &mut RouteContext<()>
+        ctx: &mut RouteContext<()>,
     ) -> Result<InteractionResponse, Error> {
-        let guild_kv = interaction.guild_kv(ctx)?;
-        let extensions_list = guild_kv.list(Some("extensions".into()), Some(COMMANDS.len() as u64), None)
+        let guild_kv = interaction.guild_kv(&ctx.env)?;
+        let extensions_list = guild_kv
+            .list(Some("extensions".into()), Some(COMMANDS.len() as u64), None)
             .await
             .map_err(|e| Error::KvError(e))?;
 
         let extensions_keys: Vec<String> = extensions_list.keys
             .into_iter()
             .map(|k| k.name)
+            .filter(|k| !k.ends_with(":config:pending"))
             .collect();
 
         let extensions_config = if extensions_keys.len() > 0 {
-            guild_kv.get_bulk(&extensions_keys)
+            guild_kv
+                .get_bulk(&extensions_keys)
                 .await
                 .map_err(|e| Error::KvError(e))?
         } else {
@@ -71,11 +65,10 @@ impl Command for Show {
             .filter_map(|(key, maybe_val)| {
                 let ext_name = key.split(':').nth(3)?.to_string();
 
-                if let Some(val) = maybe_val { 
+                if let Some(val) = maybe_val {
                     let config: ExtensionConfig<Value> = serde_json::from_str(val).ok()?;
                     Some((ext_name, config.enabled))
-                }
-                else {
+                } else {
                     None
                 }
             })
@@ -84,20 +77,29 @@ impl Command for Show {
         let mut configured_field = String::new();
         for (name, status) in status_map.iter() {
             configured_field.push_str(&format!(
-                "- *{}*: **{}**\n", 
+                "- *{}*: **{}**\n",
                 capitalize(name),
-                if *status == true { "enabled" } else { "disabled" }
+                if *status == true {
+                    "enabled"
+                } else {
+                    "disabled"
+                }
             ))
         }
 
         let mut unused_field = String::new();
         for (name, _) in COMMANDS.iter() {
-            if REQUIRED_EXTENSIONS.contains(&name.as_str()) { continue };
-            if status_map.contains_key(name) { continue };
+            if REQUIRED_EXTENSIONS.contains(&name.as_str()) {
+                continue;
+            };
+            if status_map.contains_key(name) {
+                continue;
+            };
             unused_field.push_str(&format!("- *{}*\n", capitalize(name)))
         }
 
-        let mut embed = DEFAULT_EMBED.clone()
+        let mut embed = DEFAULT_EMBED
+            .clone()
             .title("GGsBot Extensions")
             .description("Here is a list of enabled, disabled and available extensions")
             .build();
@@ -105,14 +107,16 @@ impl Command for Show {
         if !configured_field.is_empty() {
             embed.add_field("Configured", configured_field, false);
         }
-        
+
         if !unused_field.is_empty() {
-            embed.add_field("Unused", unused_field, false);
+            embed.add_field("Unconfigured", unused_field, false);
         }
 
-        Ok(ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
-            .embeds(vec![embed])
-            .ephemeral()
-            .build())
+        Ok(
+            ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
+                .embeds(vec![embed])
+                .ephemeral()
+                .build(),
+        )
     }
 }

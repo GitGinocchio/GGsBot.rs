@@ -1,19 +1,15 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use twilight_model::{
-    application::interaction::{
-            Interaction, 
-            application_command::CommandData
-        }, channel::message::MessageFlags, http::interaction::{
-        InteractionResponse, InteractionResponseData, InteractionResponseType 
-    }
+    application::interaction::{Interaction, application_command::CommandData},
+    http::interaction::{InteractionResponse, InteractionResponseType},
 };
 use worker::{RouteContext, WorkerVersionMetadata};
 
 use crate::{
-    discord::{command::Command, response::ResponseBuilder}, 
-    error::Error, 
-    utils::is_dev
+    error::Error,
+    framework::discord::{command::Command, response::ResponseBuilder},
+    utils::is_dev,
 };
 
 #[derive(Default)]
@@ -30,12 +26,13 @@ impl Command for Version {
     }
 
     async fn respond(
-        &self, 
-        _interaction: &Interaction, 
-        _data: &CommandData, 
-        ctx: &mut RouteContext<()>
+        &self,
+        _interaction: &Interaction,
+        _data: &CommandData,
+        ctx: &mut RouteContext<()>,
     ) -> Result<InteractionResponse, Error> {
-        let metadata: WorkerVersionMetadata = ctx.env.get_binding::<WorkerVersionMetadata>("metadata")?;
+        let metadata: WorkerVersionMetadata =
+            ctx.env.get_binding::<WorkerVersionMetadata>("metadata")?;
         let mut lines = Vec::new();
 
         if !is_dev(&ctx.env) {
@@ -48,8 +45,8 @@ impl Command for Version {
 
         let timestamp_str = metadata.timestamp();
         if let Ok(dt) = timestamp_str.parse::<DateTime<Utc>>() {
-            let unix_secs = dt.timestamp(); 
-            
+            let unix_secs = dt.timestamp();
+
             lines.push(format!("**⏰ Built at:** <t:{}:R>", unix_secs));
         } else {
             lines.push(format!("**⏰ Built at:** {}", timestamp_str));
@@ -57,9 +54,11 @@ impl Command for Version {
 
         let message = lines.join("\n");
 
-        Ok(ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
-            .content(message)
-            .ephemeral()
-            .build())
+        Ok(
+            ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
+                .content(message)
+                .ephemeral()
+                .build(),
+        )
     }
 }

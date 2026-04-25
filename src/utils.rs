@@ -1,8 +1,8 @@
-use reqwest::Response;
-use worker::{Result, Date, Env, Request};
 use cfg_if::cfg_if;
+use reqwest::Response;
+use worker::{Date, Env, Request, Result};
 
-use crate::{CLIENT, COMMANDS, discord::command::SerializableCommand, error::Error};
+use crate::{CLIENT, COMMANDS, error::Error, framework::discord::command::SerializableCommand};
 
 cfg_if! {
     // https://github.com/rustwasm/console_error_panic_hook#readme
@@ -48,7 +48,8 @@ pub fn log_request(req: &Request) {
         Date::now().to_string(),
         req.path(),
         cf.and_then(|cf| cf.coordinates()).unwrap_or_default(),
-        cf.and_then(|cf| cf.region()).unwrap_or("unknown region".into())
+        cf.and_then(|cf| cf.region())
+            .unwrap_or("unknown region".into())
     );
 }
 
@@ -61,7 +62,8 @@ pub fn capitalize(s: &str) -> String {
 }
 
 pub async fn update_commands(env: &Env) -> Result<Response, Error> {
-    let to_register: Vec<_> = COMMANDS.values()
+    let to_register: Vec<_> = COMMANDS
+        .values()
         .map(|cmd| SerializableCommand(cmd.as_ref()))
         .collect();
 
@@ -75,17 +77,20 @@ pub async fn update_commands(env: &Env) -> Result<Response, Error> {
         .map_err(|e| Error::EnvironmentVariableNotFound(e.to_string()))?
         .to_string();
 
-    let url = format!("https://discord.com/api/v10/applications/{}/commands", app_id);
+    let url = format!(
+        "https://discord.com/api/v10/applications/{}/commands",
+        app_id
+    );
 
-    let serialized_commands = serde_json::to_string(&to_register)
-        .map_err(|e| Error::JsonFailed(e))?;
-    worker::console_log!{"Sending  : {}", serialized_commands};
+    let serialized_commands =
+        serde_json::to_string(&to_register).map_err(|e| Error::JsonFailed(e))?;
+    worker::console_log! {"Sending  : {}", serialized_commands};
 
     CLIENT
         .put(url)
         .header("Authorization", format!("Bot {}", token))
         .header("Content-Type", "application/json")
-        .body(serialized_commands) 
+        .body(serialized_commands)
         .send()
         .await
         .map_err(|e| Error::ReqwestError(e))

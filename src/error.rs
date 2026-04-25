@@ -3,7 +3,10 @@ use std::num::ParseIntError;
 use hex::FromHexError;
 use twilight_model::http::interaction::{InteractionResponse, InteractionResponseType};
 
-use crate::{discord::response::{InteractionResponseExt, ResponseBuilder}, ui::embeds::error::{BUG_ICON, ERROR_EMBED, ERROR_ICON}};
+use crate::{
+    framework::discord::response::ResponseBuilder,
+    ui::embeds::error::{BUG_ICON, ERROR_EMBED},
+};
 
 #[allow(unused)]
 #[derive(Debug, thiserror::Error)]
@@ -51,7 +54,7 @@ pub(crate) enum Error {
     UpstreamError(String),
 
     #[error("Error: {0}")]
-    Generic(String)
+    Generic(String),
 }
 
 impl From<Error> for worker::Error {
@@ -60,19 +63,22 @@ impl From<Error> for worker::Error {
     }
 }
 
+#[allow(unused)]
 impl Error {
     pub fn status_code(&self) -> u16 {
         match self {
             Self::VerificationFailed(_) => 401,
-            Self::HeaderNotFound(_) | Self::InvalidPayload(_) | Self::EnvironmentVariableNotFound(_) => 400,
+            Self::HeaderNotFound(_)
+            | Self::InvalidPayload(_)
+            | Self::EnvironmentVariableNotFound(_) => 400,
             Self::JsonFailed(_) => 400,
-            _ => 500
+            _ => 500,
         }
     }
 
     pub fn as_interaction(&self, ray_id: &str) -> InteractionResponse {
         let (title, description) = match self {
-            _ => ("Ops!", "Something went wrong!")
+            _ => ("Ops!", "Something went wrong!"),
         };
 
         let embed = ERROR_EMBED.clone()
@@ -91,6 +97,7 @@ impl Error {
 
         ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
             .embeds(vec![embed])
+            .components(vec![])
             .ephemeral()
             .build()
     }

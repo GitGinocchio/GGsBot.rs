@@ -1,20 +1,12 @@
 use async_trait::async_trait;
 use twilight_model::{
-    application::interaction::{
-            Interaction, 
-            application_command::CommandData
-        }, channel::message::MessageFlags, http::interaction::{
-        InteractionResponse, InteractionResponseData, InteractionResponseType 
-    }
+    application::interaction::{Interaction, application_command::CommandData},
+    channel::message::MessageFlags,
+    http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType},
 };
-use worker::{RouteContext};
+use worker::RouteContext;
 
-use crate::{
-    discord::{
-        command::Command, 
-    }, 
-    error::Error, 
-};
+use crate::{error::Error, framework::discord::command::Command};
 
 #[derive(Default)]
 pub struct New;
@@ -30,10 +22,10 @@ impl Command for New {
     }
 
     async fn respond(
-        &self, 
-        _interaction: &Interaction, 
-        _data: &CommandData, 
-        _ctx: &mut RouteContext<()>
+        &self,
+        _interaction: &Interaction,
+        _data: &CommandData,
+        _ctx: &mut RouteContext<()>,
     ) -> Result<InteractionResponse, Error> {
         Ok(InteractionResponse {
             kind: InteractionResponseType::ChannelMessageWithSource,
