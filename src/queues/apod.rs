@@ -35,6 +35,7 @@ impl Queue for ApodQueue {
         let apod_embed_value = serde_json::to_value(&apod_embed)?;
 
         for message in batch.messages()? {
+            worker::console_debug!("raw message: {:?}", message.body());
             let msg_data: ApodQueueMessage = match serde_json::from_value(message.body().clone()) {
                 Ok(m) => m,
                 Err(e) => {

@@ -75,6 +75,8 @@ impl Trigger for ApodTrigger {
                     "channel_id": channel_id
                 });
 
+                worker::console_debug!("message: {:?}", message);
+
                 queue.send(message).await?;
             }
 
