@@ -28,7 +28,9 @@ impl Queue for ApodQueue {
         let discord_service = DiscordService::new(env);
         
         let apod_service = ApodService::new(env)?;
-        let apod_data = apod_service.get_apod().await?;
+        let apod_data = apod_service.fetch_apod_with_retries(3).await?;
+        apod_service.put_apod(&apod_data).await?;
+        
         let apod_embed = ApodService::build_embed(apod_data);
         let apod_embed_value = serde_json::to_value(&apod_embed)?;
 

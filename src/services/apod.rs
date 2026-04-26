@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use chrono::Utc;
+use chrono::{FixedOffset, Utc};
 use serde::{Deserialize, Serialize};
 use twilight_model::channel::message::Embed;
 use url::Url;
@@ -36,6 +36,14 @@ pub struct ApodResponse {
     copyright: Option<String>,
 }
 
+// Helper per ottenere la data attuale in Eastern Time (USA)
+fn get_target_date_et() -> String {
+    // NASA usa ET (UTC-5 o UTC-4). Per un bot, un offset fisso di -5 è solitamente sufficiente
+    // oppure puoi usare il crate `chrono-tz` per la gestione automatica dell'ora legale.
+    let et_offset = FixedOffset::west_opt(5 * 3600).unwrap();
+    Utc::now().with_timezone(&et_offset).format("%Y-%m-%d").to_string()
+}
+
 fn convert_to_watch_url(nasa_embed_url: &str) -> Option<String> {
     let parsed_url = Url::parse(nasa_embed_url).ok()?;
     let path_segments: Vec<&str> = parsed_url.path_segments()?.collect();
@@ -62,7 +70,7 @@ impl ApodService {
         })
     }
 
-    async fn fetch_apod_with_retries(&self, max_attempts: u32) -> Result<ApodResponse, Error> {
+    pub async fn fetch_apod_with_retries(&self, max_attempts: u32) -> Result<ApodResponse, Error> {
         let mut attempts = 0;
         while attempts < max_attempts {
             match self.fetch_data().await {
@@ -96,19 +104,28 @@ impl ApodService {
     pub async fn get_apod(&self) -> Result<ApodResponse, Error> {
         let kv = self.env.kv(KV_BINDING)?;
 
-        let date = Utc::now().format("%Y-%m-%d").to_string();
+        let date = get_target_date_et();
 
         if let Some(cached_data) = kv.get(&format!("nasa:apod:{date}")).json::<ApodResponse>().await? {
             return Ok(cached_data);
         }
 
         let apod_data = self.fetch_apod_with_retries(3).await?;
-        kv.put(&format!("nasa:apod:{date}"), serde_json::to_string(&apod_data)?)?
+
+        self.put_apod(&apod_data).await?;
+
+        Ok(apod_data)
+    }
+
+    pub async fn put_apod(&self, data: &ApodResponse) -> Result<(), Error> {
+        let kv = self.env.kv(KV_BINDING)?;
+
+        kv.put(&format!("nasa:apod:{}", data.date.format("%Y-%m-%d").to_string()), serde_json::to_string(data)?)?
             .expiration_ttl(86400)
             .execute()
             .await?;
 
-        Ok(apod_data)
+        Ok(())
     }
 
     pub fn build_embed(data: ApodResponse) -> Embed {
