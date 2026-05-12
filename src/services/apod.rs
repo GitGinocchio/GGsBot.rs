@@ -139,13 +139,17 @@ impl ApodService {
         );
 
         embed.set_author(
-            data.copyright.unwrap_or("NASA".into()),
+            "NASA",
             Some("https://api.nasa.gov/assets/img/favicons/favicon-192.png".into()),
             Some("https://nasa.gov".into()),
         );
 
         if let Some(concepts) = data.concepts {
             embed.add_field("Concepts", concepts.join(","), false);
+        }
+
+        if let Some(copyright) = data.copyright {
+            embed.add_field("Copyright", copyright, false);
         }
 
         match data.media_type {

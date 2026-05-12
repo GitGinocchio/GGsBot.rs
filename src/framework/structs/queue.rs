@@ -2,6 +2,27 @@ use worker::*;
 
 use crate::QUEUES;
 
+/**
+Usage:
+build_queue_enum!(
+    Hello => queues::hello::Hello,
+    Nasa  => queues::nasa::Nasa,
+    Bot   => queues::bot::Bot
+);
+*/
+#[macro_export]
+macro_rules! build_queue_enum {
+    ($($variant:ident => $handler:ty),*) => {
+        #[derive(serde::Serialize, serde::Deserialize, Debug)]
+        #[serde(tag = "type", content = "data")]
+        pub enum QueueMessage {
+            $(
+                $variant($handler),
+            )*
+        }
+    };
+}
+
 pub struct QueueProcessor {
     env: Env,
     ctx: Context,
@@ -12,7 +33,7 @@ impl QueueProcessor {
         Self { env, ctx }
     }
 
-    pub async fn process(&self, batch: MessageBatch<serde_json::Value>) -> Result<()> {
+    pub async fn process(&self, batch: MessageBatch<crate::QueueMessage>) -> Result<()> {
         let queue_name = batch.queue();
         worker::console_log!("[QueueJob]: Batch started for queue '{}'", queue_name);
 

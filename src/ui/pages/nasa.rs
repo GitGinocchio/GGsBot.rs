@@ -1,8 +1,26 @@
 use async_trait::async_trait;
-use twilight_model::{application::interaction::Interaction, channel::{ChannelType, message::{Component, Embed, component::SelectMenuType}}, http::interaction::{InteractionResponse, InteractionResponseType}};
-use worker::RouteContext;
+use twilight_model::{
+    channel::{
+        ChannelType, 
+        message::{
+            Component,
+            component::SelectMenuType
+        }
+    }, 
+    http::interaction::{
+        InteractionResponse, 
+        InteractionResponseType
+    }
+};
 
-use crate::{error::Error, framework::{discord::{embed::{EmbedBuilder, EmbedExt}, response::ResponseBuilder}, traits::page::Page}, ui::embeds::default::DEFAULT_EMBED};
+use crate::{
+    error::Error, 
+    framework::{
+        discord::response::ResponseBuilder, 
+        traits::page::Page
+    }, 
+    ui::embeds::default::DEFAULT_EMBED
+};
 
 pub struct NasaSetupPage {
     parent_id: String

@@ -4,7 +4,7 @@ use twilight_model::{
 };
 use worker::RouteContext;
 
-use crate::{error::Error, framework::discord::command::Command};
+use crate::error::Error;
 
 #[async_trait(?Send)]
 pub trait CommandController {

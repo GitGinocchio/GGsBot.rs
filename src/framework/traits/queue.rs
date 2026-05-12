@@ -30,7 +30,7 @@ pub trait Queue {
 
     async fn handle(
         &self,
-        batch: MessageBatch<serde_json::Value>,
+        batch: MessageBatch<crate::QueueMessage>,
         env: &Env,
         ctx: &Context,
     ) -> Result<(), Error>;

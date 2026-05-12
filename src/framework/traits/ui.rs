@@ -6,7 +6,7 @@ use twilight_model::{
 };
 use worker::RouteContext;
 
-use crate::{error::Error, framework::discord::command::Command};
+use crate::error::Error;
 
 pub type UiHandlerMap = HashMap<String, Box<dyn UiHandler + Send + Sync>>;
 

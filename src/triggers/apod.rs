@@ -1,13 +1,14 @@
 use async_trait::async_trait;
-use chrono::Utc;
-use serde_json::json;
 use worker::{Env, ScheduleContext, ScheduledEvent};
 
 use crate::{
-    commands::nasa::NasaExtConfig, error::Error, framework::{structs::config::extension::ExtensionConfig, traits::{
-        namespaces::KV_BINDING,
-        trigger::{CronSchedule, Trigger},
-    }}, services::apod::ApodService
+    QueueMessage, commands::nasa::NasaExtConfig, error::Error, framework::{
+        structs::config::extension::ExtensionConfig, 
+        traits::{
+            namespaces::KV_BINDING,
+            trigger::{CronSchedule, Trigger},
+        }
+    }, queues::apod::ApodQueueMessage
 };
 
 #[derive(Default)]
@@ -70,9 +71,9 @@ impl Trigger for ApodTrigger {
                     continue;
                 };
 
-                let message = json!({
-                    "guild_id" : guild_id,
-                    "channel_id": channel_id
+                let message = QueueMessage::Apod(ApodQueueMessage {
+                    guild_id: guild_id.into(),
+                    channel_id: channel_id
                 });
 
                 worker::console_debug!("message: {:?}", message);

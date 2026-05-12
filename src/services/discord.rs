@@ -1,6 +1,5 @@
 use serde::Serialize;
 use serde_json::Value;
-use twilight_model::{channel::Message, http::interaction::{InteractionResponse, InteractionResponseData}};
 use worker::Env;
 
 use crate::{CLIENT, error::Error};

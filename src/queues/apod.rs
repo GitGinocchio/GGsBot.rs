@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use worker::{Context, Env, MessageBatch, MessageExt};
 
-use crate::{error::Error, framework::traits::queue::Queue, services::{apod::ApodService, discord::{DiscordMessagePayload, DiscordService}}};
+use crate::{QueueMessage, error::Error, framework::traits::queue::Queue, services::{apod::ApodService, discord::{DiscordMessagePayload, DiscordService}}};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ApodQueueMessage {
@@ -21,7 +21,7 @@ impl Queue for ApodQueue {
 
     async fn handle(
         &self,
-        batch: MessageBatch<serde_json::Value>,
+        batch: MessageBatch<QueueMessage>,
         env: &Env,
         _ctx: &Context,
     ) -> Result<(), Error> {
@@ -35,22 +35,20 @@ impl Queue for ApodQueue {
         let apod_embed_value = serde_json::to_value(&apod_embed)?;
 
         for message in batch.messages()? {
-            worker::console_debug!("raw message: {:?}", message.body());
-            let msg_data: ApodQueueMessage = match serde_json::from_value(message.body().clone()) {
-                Ok(m) => m,
-                Err(e) => {
-                    worker::console_error!("Errore deserializzazione messaggio: {:?}", e);
-                    message.ack();
-                    continue;
-                }
+            let data = match message.body() {
+                QueueMessage::Apod(b) => b,
+                #[allow(unused)]
+                _ => continue
             };
+
+            worker::console_debug!("message data: {:?}", data);
 
             let payload = DiscordMessagePayload {
                 embeds: Some(vec![apod_embed_value.clone()]),
                 ..Default::default()
             };
 
-            match discord_service.send_guild_message(&msg_data.channel_id, &payload).await {
+            match discord_service.send_guild_message(&data.channel_id, &payload).await {
                 Ok(_) => {
                     message.ack();
                 },
@@ -58,7 +56,7 @@ impl Queue for ApodQueue {
                     message.retry();
                     worker::console_error!(
                         "Fallito invio per guild {}: {:?}", 
-                        msg_data.guild_id, 
+                        data.guild_id, 
                         e
                     );
                 }

@@ -4,7 +4,7 @@ use twilight_model::{application::interaction::Interaction, http::interaction::I
 use worker::RouteContext;
 
 use crate::{
-    build_commands, error::Error, framework::{discord::{command::{Command, CommandMap}, interaction::InteractionExt, response::{InteractionResponseExt, ResponseBuilder}}, traits::command::CommandController}
+    build_commands, error::Error, framework::{discord::{command::{Command, CommandMap}, interaction::InteractionExt}, traits::command::CommandController}
 };
 
 mod apod;

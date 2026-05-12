@@ -22,7 +22,7 @@ impl Command for Version {
     }
 
     fn description(&self) -> String {
-        "Mostra la version del bot!".into()
+        "Mostra la versione del bot!".into()
     }
 
     async fn respond(

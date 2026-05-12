@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use serde::Serialize;
 use twilight_model::{
     application::interaction::{Interaction, message_component::MessageComponentInteractionData},
     http::interaction::InteractionResponse,

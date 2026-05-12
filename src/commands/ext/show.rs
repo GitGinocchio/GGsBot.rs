@@ -95,6 +95,10 @@ impl Command for Show {
             if status_map.contains_key(name) {
                 continue;
             };
+
+            // TODO: Aggiungere un check per includere nei comandi inutilizzati
+            // solo quelli che hanno un CommandController
+
             unused_field.push_str(&format!("- *{}*\n", capitalize(name)))
         }
 

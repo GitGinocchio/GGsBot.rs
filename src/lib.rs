@@ -3,12 +3,24 @@ use std::sync::LazyLock;
 use worker::*;
 
 use crate::{
-    framework::discord::{
-        bot::Bot,
-        command::{CommandMap, SerializableCommand},
-    },
-    framework::structs::{queue::QueueProcessor, scheduler::Scheduler},
-    framework::traits::{queue::QueueMap, trigger::TriggerMap, ui::UiHandlerMap},
+        framework::{
+            discord::{
+                bot::Bot,
+                command::{
+                    CommandMap, 
+                    SerializableCommand
+                },
+            }, 
+        structs::{
+            queue::QueueProcessor, 
+            scheduler::Scheduler
+        }, 
+        traits::{
+            queue::QueueMap, 
+            trigger::TriggerMap, 
+            ui::UiHandlerMap
+        }
+    }
 };
 
 mod commands;
@@ -43,9 +55,14 @@ static QUEUES: LazyLock<QueueMap> = LazyLock::new(|| build_queue_handlers!(
     queues::apod::ApodQueue
 ));
 
+build_queue_enum!(
+    Apod => queues::apod::ApodQueueMessage
+);
+
+
 #[event(queue)]
 pub async fn on_queue(
-    batch: MessageBatch<serde_json::Value>,
+    batch: MessageBatch<QueueMessage>,
     env: Env,
     ctx: Context,
 ) -> Result<()> {
