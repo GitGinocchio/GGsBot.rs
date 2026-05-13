@@ -6,7 +6,7 @@ import sys
 
 REPO_OWNER = "GitGinocchio"
 REPO_NAME = "GGsBot.rs"
-BINARY_NAME = "discord-ws-http-bridge"
+BINARY_NAME = "gateway"
 VERSION_FILE = ".version"
 
 def get_local_version():

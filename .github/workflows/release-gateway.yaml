@@ -5,6 +5,7 @@ on:
     branches: [master, main]
     paths:
       - 'gateway/**'
+      - 'Cargo.lock'
 
 permissions:
   contents: write
@@ -12,9 +13,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./gateway
+    # Rimosso il default globale
     steps:
       - uses: actions/checkout@v4
 
@@ -28,12 +27,16 @@ jobs:
 
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
+        # Qui non serve specificare nulla perché l'action 
+        # troverà il Cargo.lock nella root di default
 
       - name: Get Short SHA
         id: slug
         run: echo "sha8=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Build
+        # Specifichiamo la directory solo per il build
+        working-directory: ./gateway
         run: cargo build --release --target x86_64-unknown-linux-musl
 
       - name: Create Release
@@ -42,6 +45,7 @@ jobs:
           tag_name: ${{ steps.slug.outputs.sha8 }}
           name: Gateway release ${{ steps.slug.outputs.sha8 }}
           files: |
-            gateway/target/x86_64-unknown-linux-musl/release/gateway
+            # Ora i percorsi sono relativi alla ROOT del progetto (molto più semplice!)
+            target/x86_64-unknown-linux-musl/release/gateway
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
