@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 REPO_OWNER = "GitGinocchio"
-REPO_NAME = "discord-ws-http-bridge"
+REPO_NAME = "GGsBot.rs"
 BINARY_NAME = "discord-ws-http-bridge"
 VERSION_FILE = ".version"
 

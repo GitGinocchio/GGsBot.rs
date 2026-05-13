@@ -4,6 +4,8 @@ use once_cell::sync::Lazy;
 use serenity::all::GatewayIntents;
 use reqwest::{Client, ClientBuilder, header::{self, HeaderValue}};
 
+use crate::dispatcher::Dispatcher;
+
 pub static CLIENT: Lazy<Client> = Lazy::new(|| {
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(header::CONTENT_TYPE,HeaderValue::from_static("application/json"));
@@ -24,8 +26,14 @@ pub static CLIENT: Lazy<Client> = Lazy::new(|| {
         .expect("failed to create http client")
 });
 
+pub static DISPATCHER: Lazy<Dispatcher> = Lazy::new(|| Dispatcher::new());
+
 pub static HTTP_ENDPOINT: Lazy<String> = Lazy::new(|| {
     env::var("HTTP_ENDPOINT").expect("missing HTTP_ENDPOINT")
+});
+
+pub static QUEUE_ENDPOINT: Lazy<String> = Lazy::new(|| {
+    env::var("QUEUE_ENDPOINT").expect("missing QUEUE_ENDPOINT")
 });
 
 pub static AUTHORIZATION_TOKEN: Lazy<String> = Lazy::new(|| {
