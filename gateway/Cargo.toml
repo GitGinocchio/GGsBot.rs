@@ -1,5 +1,5 @@
 [package]
-name = "discord-ws-http-bridge"
+name = "gateway"
 version = "0.1.0"
 edition = "2024"
 
