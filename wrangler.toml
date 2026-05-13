@@ -20,12 +20,20 @@ queue = "ggsbotrs-apod-queue"
 
 [[queues.consumers]]
 queue = "ggsbotrs-apod-queue"
-max_batch_size = 5
-max_batch_timeout = 5
-max_retries = 5
-max_concurrency = 3
+max_batch_size = 10
+max_batch_timeout = 0
+max_retries = 3
+max_concurrency = 2
 retry_delay = 120
 #dead_letter_queue = "my-queue-dlq"
+
+[[queues.consumers]]
+queue = "ggsbotrs-gateway-queue"
+max_batch_size = 1
+max_batch_timeout = 0
+max_retries = 3
+max_concurrency = 10
+retry_delay = 5
 
 [observability]
 enabled = false
