@@ -1,5 +1,5 @@
 use reqwest::Client;
-use serde_json::Value;
+use serde_json::{Value, json};
 use std::sync::LazyLock;
 use worker::*;
 
@@ -87,7 +87,9 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
         .post_async("/api/gateway", async |mut req, _ctx| {
             let data: Value = req.json().await?;
             worker::console_debug!("gateway data received: {data:?}");
-            Response::empty()
+            Response::from_json(&json!({
+                "status" : "success"
+            }))
         })
         .get_async("/api/commands", |_req, _ctx| async move {
             let commands: Vec<_> = COMMANDS
