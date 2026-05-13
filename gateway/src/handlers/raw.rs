@@ -17,6 +17,7 @@ impl RawEventHandler for RawHandler {
             .send_event(&json!(event))
             .await
             .unwrap();
+        
 
         println!("[raw_event] response: {response}");
     }
