@@ -1,0 +1,44 @@
+name: Build and Release Gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'gateway/**'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./gateway
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: rustup target add x86_64-unknown-linux-musl
+
+      - name: Install MUSL Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Get Short SHA
+        id: slug
+        run: echo "sha8=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Build
+        run: cargo build --release --target x86_64-unknown-linux-musl
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.slug.outputs.sha8 }}
+          name: Release ${{ steps.slug.outputs.sha8 }}
+          files: |
+            /gateway/target/x86_64-unknown-linux-musl/release/discord-ws-http-bridge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
