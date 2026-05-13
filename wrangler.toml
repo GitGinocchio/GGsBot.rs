@@ -29,7 +29,7 @@ retry_delay = 120
 
 [[queues.consumers]]
 queue = "ggsbotrs-gateway-queue"
-max_batch_size = 1
+max_batch_size = 10
 max_batch_timeout = 0
 max_retries = 3
 max_concurrency = 10
