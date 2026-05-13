@@ -4,7 +4,6 @@ pub mod handlers;
 pub mod constants;
 pub mod dispatcher;
 
-use handlers::message::MessageHandler;
 use handlers::raw::RawHandler;
 
 use constants::INTENTS;
