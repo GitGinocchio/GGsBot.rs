@@ -31,7 +31,7 @@ jobs:
         run: echo "sha8=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Build
-        run: cargo build --release --target x86_64-unknown-linux-musl -p gateway
+        run: cargo build --release --target x86_64-unknown-linux-musl
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
