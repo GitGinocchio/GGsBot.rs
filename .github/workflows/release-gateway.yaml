@@ -31,7 +31,7 @@ jobs:
         run: echo "sha8=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Build
-        run: cargo build --release --target x86_64-unknown-linux-musl
+        run: cargo build --release --target x86_64-unknown-linux-musl -p gateway
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -39,6 +39,6 @@ jobs:
           tag_name: ${{ steps.slug.outputs.sha8 }}
           name: Release ${{ steps.slug.outputs.sha8 }}
           files: |
-            /gateway/target/x86_64-unknown-linux-musl/release/discord-ws-http-bridge
+            /target/x86_64-unknown-linux-musl/release/discord-ws-http-bridge
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
