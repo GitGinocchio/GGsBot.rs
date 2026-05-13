@@ -2,7 +2,7 @@ name: Build and Release Gateway
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
     paths:
       - 'gateway/**'
 
