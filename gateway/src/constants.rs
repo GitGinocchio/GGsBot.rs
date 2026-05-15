@@ -6,28 +6,15 @@ use twilight_gateway::{EventType, EventTypeFlags, Intents};
 use crate::dispatcher::{DispatchStrategy, Dispatcher};
 
 pub static DISPATCH_STRATEGIES: LazyLock<HashMap<EventType, DispatchStrategy>> = LazyLock::new(|| {
-    let mut map = HashMap::new();
-    
-    map.insert(
-        EventType::MessageCreate,     
-        DispatchStrategy::AlwaysQueue { queue_delay: 10 }
-    );
-
-    map.insert(
-        EventType::MessageUpdate,     
-        DispatchStrategy::AlwaysQueue { queue_delay: 10 }
-    );
-
-    map.insert(
-        EventType::MessageDelete,     
-        DispatchStrategy::AlwaysQueue { queue_delay: 10 }
-    );
+    let map = HashMap::new();
     
     map
 });
 
 pub static WANTED_EVENTS: LazyLock<EventTypeFlags> = LazyLock::new(|| {
     EventTypeFlags::all()
+        .difference(EventTypeFlags::GATEWAY_HEARTBEAT_ACK)
+        .difference(EventTypeFlags::GATEWAY_HELLO)
 });
 
 pub const INTENTS: Intents = Intents::empty()
