@@ -4,23 +4,41 @@ compatibility_date = "2026-04-14"
 
 main = "build/index.js"
 
-[[kv_namespaces]]
+[vars]
+WORKER_ENV = "production"
+DISCORD_DEVELOPER_ID = "778017089230209045"
+
+[env.production.vars]
+WORKER_ENV = "production"
+DISCORD_DEVELOPER_ID = "778017089230209045"
+
+[env.local.vars]
+WORKER_ENV = "dev"
+DISCORD_DEVELOPER_ID = "778017089230209045"
+
+[env.local.build]
+command = "cargo install -q worker-build && worker-build --release" # required
+
+[env.production.version_metadata]
+binding = "metadata"
+
+[[env.production.kv_namespaces]]
 binding = "ggsbotkv"
 id = "c1c5302906b04ad1af9c6f87b80f1367"
 
-[triggers]
+[env.production.triggers]
 crons = [
   "0 7 * * *"
 ]
 
 # Modificare questa coda in modo che diventi una coda generica "tasks"
 # nel quale il bot inserisce delle azioni che dovra' fare in futuro
-[[queues.producers]]
+[[env.production.queues.producers]]
 binding = "APOD_QUEUE"
 queue = "ggsbotrs-apod-queue"
 #delivery_delay = 60
 
-[[queues.consumers]]
+[[env.production.queues.consumers]]
 queue = "ggsbotrs-apod-queue"
 max_batch_size = 10
 max_batch_timeout = 0
@@ -29,7 +47,7 @@ max_concurrency = 2
 retry_delay = 120
 #dead_letter_queue = "my-queue-dlq"
 
-[[queues.consumers]]
+[[env.production.queues.consumers]]
 queue = "ggsbotrs-gateway-queue"
 max_batch_size = 10
 max_batch_timeout = 0
@@ -37,11 +55,11 @@ max_retries = 3
 max_concurrency = 10
 retry_delay = 5
 
-[[ratelimits]]
+[[env.production.ratelimits]]
 name = "gateway-rate-limiter"
 namespace_id = "0"
 
-  [ratelimits.simple]
+  [env.production.ratelimits.simple]
   limit = 50
   period = 10
 
@@ -62,24 +80,6 @@ head_sampling_rate = 1
 
 [assets]
 directory = "./dist"
-
-[vars]
-WORKER_ENV = "production"
-DISCORD_DEVELOPER_ID = "778017089230209045"
-
-[env.production.vars]
-WORKER_ENV = "production"
-DISCORD_DEVELOPER_ID = "778017089230209045"
-
-[env.local.vars]
-WORKER_ENV = "dev"
-DISCORD_DEVELOPER_ID = "778017089230209045"
-
-[env.local.build]
-command = "cargo install -q worker-build && worker-build --release" # required
-
-[version_metadata]
-binding = "metadata"
 
 # read more about configuring your Worker via wrangler.toml at:
 # https://developers.cloudflare.com/workers/cli-wrangler/configuration
