@@ -1,4 +1,4 @@
-use twilight_gateway::{EventTypeFlags, Shard, ShardId, StreamExt};
+use twilight_gateway::{Shard, ShardId, StreamExt};
 
 pub mod constants;
 pub mod dispatcher;
@@ -6,7 +6,7 @@ pub mod dispatcher;
 use constants::{INTENTS, DISCORD_TOKEN};
 use twilight_model::gateway::event::DispatchEvent;
 
-use crate::constants::DISPATCHER;
+use crate::constants::{DISPATCHER, WANTED_EVENTS};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
 
     println!("📡 Avvio del gateway (Twilight) in corso...");
 
-    while let Some(item) = shard.next_event(EventTypeFlags::all()).await {
+    while let Some(item) = shard.next_event(WANTED_EVENTS.clone()).await {
         let event = match item {
                 Ok(event) => event,
                 Err(source) => {

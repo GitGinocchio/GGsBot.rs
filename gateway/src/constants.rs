@@ -14,6 +14,9 @@ pub static DISPATCH_STRATEGIES: LazyLock<HashMap<EventType, DispatchStrategy>> =
 pub static WANTED_EVENTS: LazyLock<EventTypeFlags> = LazyLock::new(|| {
     EventTypeFlags::all()
         .difference(EventTypeFlags::GATEWAY_HEARTBEAT_ACK)
+        .difference(EventTypeFlags::GATEWAY_HEARTBEAT)
+        .difference(EventTypeFlags::GATEWAY_RECONNECT)
+        .difference(EventTypeFlags::GATEWAY_INVALIDATE_SESSION)
         .difference(EventTypeFlags::GATEWAY_HELLO)
 });
 
