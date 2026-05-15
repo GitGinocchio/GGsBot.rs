@@ -4,6 +4,9 @@ compatibility_date = "2026-04-14"
 
 main = "build/index.js"
 
+[env.production]
+main = "dist/index.js"
+
 [vars]
 WORKER_ENV = "production"
 DISCORD_DEVELOPER_ID = "778017089230209045"
@@ -63,22 +66,22 @@ namespace_id = "0"
   limit = 50
   period = 10
 
-[observability]
+[env.production.observability]
 enabled = false
 head_sampling_rate = 1
 
-[observability.logs]
+[env.production.observability.logs]
 enabled = true
 head_sampling_rate = 1
 persist = true
 invocation_logs = true
 
-[observability.traces]
+[env.production.observability.traces]
 enabled = true
 persist = true
 head_sampling_rate = 1
 
-[assets]
+[env.production.assets]
 directory = "./dist"
 
 # read more about configuring your Worker via wrangler.toml at:
