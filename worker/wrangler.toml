@@ -13,6 +13,8 @@ crons = [
   "0 7 * * *"
 ]
 
+# Modificare questa coda in modo che diventi una coda generica "tasks"
+# nel quale il bot inserisce delle azioni che dovra' fare in futuro
 [[queues.producers]]
 binding = "APOD_QUEUE"
 queue = "ggsbotrs-apod-queue"
