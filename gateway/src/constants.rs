@@ -18,6 +18,7 @@ pub static WANTED_EVENTS: LazyLock<EventTypeFlags> = LazyLock::new(|| {
         .difference(EventTypeFlags::GATEWAY_RECONNECT)
         .difference(EventTypeFlags::GATEWAY_INVALIDATE_SESSION)
         .difference(EventTypeFlags::GATEWAY_HELLO)
+        .difference(EventTypeFlags::RESUMED)
 });
 
 pub const INTENTS: Intents = Intents::empty()
