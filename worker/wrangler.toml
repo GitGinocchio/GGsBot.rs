@@ -2,9 +2,6 @@ name = "ggsbotrs"
 workers_dev = true
 compatibility_date = "2026-04-14"
 
-main = "build/index.js"
-
-[env.production]
 main = "dist/index.js"
 
 [vars]
