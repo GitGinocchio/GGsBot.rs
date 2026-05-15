@@ -4,9 +4,8 @@ compatibility_date = "2026-04-14"
 
 main = "build/index.js"
 
-[build]
+[env.local.build]
 command = "cargo install -q worker-build && worker-build --release" # required
-
 
 [vars]
 WORKER_ENV = "production"
