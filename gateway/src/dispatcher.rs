@@ -2,10 +2,18 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
+use reqwest::Response;
 use serde_json::{Value, json};
 use tokio::sync::Mutex;
+use twilight_model::gateway::event::DispatchEvent;
 
-use crate::constants::{CLIENT, HTTP_ENDPOINT, QUEUE_ENDPOINT};
+use crate::constants::{CLIENT, DISPATCH_STRATEGIES, HTTP_ENDPOINT, QUEUE_ENDPOINT};
+
+pub enum DispatchStrategy {
+    AlwaysQueue { queue_delay: u64 },
+    Smart { queue_delay: u64 }, // based on rate-limiter/429
+    AlwaysWorker,
+}
 
 pub struct Dispatcher {
     in_fallback_mode: AtomicBool,
@@ -22,36 +30,29 @@ impl Dispatcher {
 }
 
 impl Dispatcher {
-    pub async fn send_event(&self, payload: &Value) -> Result<Value, Box<dyn std::error::Error>> {
-        let now = Instant::now();
+    pub async fn dispatch(&self, event: &DispatchEvent) -> Result<Response, anyhow::Error> {
+        let kind = event.kind();
         
-        // Verifica se dobbiamo "raffreddare" il fallback
-        if self.in_fallback_mode.load(Ordering::SeqCst) {
-            let last_time = self.last_429_time.lock().await;
-            if let Some(time) = *last_time {
-                if now.duration_since(time) > Duration::from_secs(60) {
-                    // Reset: proviamo a tornare al worker
-                    self.in_fallback_mode.store(false, Ordering::SeqCst);
-                } else {
-                    // Siamo ancora in cooldown, vai alla coda
-                    return self.send_to_queue(payload, 0).await;
-                }
-            }
-        }
+        let strategy = DISPATCH_STRATEGIES
+            .get(&kind)
+            .unwrap_or(&DispatchStrategy::Smart { queue_delay: 0 });
 
-        // Tentativo primario: Worker
-        let res = CLIENT.post(&*HTTP_ENDPOINT).json(payload).send().await;
+        println!("📥 [EVENT] {:?}", kind);
 
-        match res {
-            Ok(response) if response.status().is_success() => Ok(response.json().await?),
-            Ok(response) if response.status().as_u16() == 429 => {
-                self.trigger_fallback().await;
-                self.send_to_queue(payload, 0).await
+        let payload = serde_json::to_value(event)?;
+
+        match strategy {
+            DispatchStrategy::AlwaysQueue { queue_delay } => {
+                println!("  ↳ 📥 [ROUTE] Strategia: AlwaysQueue (Delay: {}s)", queue_delay);
+                self.send_to_queue(&payload, *queue_delay).await
             },
-            _ => {
-                // Errore generico o timeout: mandiamo in coda per sicurezza ma senza bloccare il traffico futuro
-                self.send_to_queue(payload, 0).await
-            }
+            DispatchStrategy::AlwaysWorker => {
+                println!("  ↳ ⚡ [ROUTE] Strategia: AlwaysWorker");
+                self.send_to_worker(&payload).await
+            },
+            DispatchStrategy::Smart { queue_delay } => {
+                self.send(&payload, *queue_delay).await
+            },
         }
     }
 
@@ -61,22 +62,63 @@ impl Dispatcher {
         *last_time = Some(Instant::now());
     }
 
-    async fn send_to_queue(&self, payload: &Value, delay_seconds: u8) -> Result<Value, Box<dyn std::error::Error>> {
+    async fn send(&self, payload: &Value, queue_delay: u64) -> Result<Response, anyhow::Error> {
+        let now = Instant::now();
+        
+        if self.in_fallback_mode.load(Ordering::SeqCst) {
+            let last_time = self.last_429_time.lock().await;
+            if let Some(time) = *last_time {
+                if now.duration_since(time) > Duration::from_secs(60) {
+                    println!("  ↳ ♻️ [SMART] Cooldown terminato. Tento ripristino verso Worker.");
+                    self.in_fallback_mode.store(false, Ordering::SeqCst);
+                } else {
+                    println!("  ↳ ⚠️ [SMART] Fallback attivo (Cooldown). Routing verso Queue.");
+                    return self.send_to_queue(&payload, queue_delay).await;
+                }
+            }
+        }
+
+        let res = self.send_to_worker(&payload).await;
+
+        match res {
+            Ok(response) if response.status().is_success() => {
+                println!("    ✅ [WORKER] Inviato con successo");
+                Ok(response)
+            },
+            Ok(response) if response.status().as_u16() == 429 => {
+                eprintln!("    🛑 [RATELIMIT] 429 ricevuto dal Worker! Attivo Fallback Mode.");
+                self.trigger_fallback().await;
+                self.send_to_queue(&payload, queue_delay).await
+            },
+            _ => {
+                eprintln!("    ❌ [ERROR] Worker non raggiungibile. Backup su Queue.");
+                self.send_to_queue(&payload, queue_delay).await
+            }
+        }
+    }
+
+    async fn send_to_worker(&self, payload: &Value) -> Result<Response, anyhow::Error> {
+        let response = CLIENT
+            .post(&*HTTP_ENDPOINT)
+            .json(&payload)
+            .send()
+            .await?;
+
+        Ok(response)
+    }
+
+    async fn send_to_queue(&self, payload: &Value, queue_delay: u64) -> Result<Response, anyhow::Error> {
         let payload = json!({
             "body" : payload, 
             "content_type" : "json",
-            "delay_seconds": delay_seconds
+            "delay_seconds": queue_delay
         });
 
-        let response: Value = CLIENT
+        let response = CLIENT
             .post(&*QUEUE_ENDPOINT)
             .json(&payload)
             .send()
-            .await?
-            .json()
             .await?;
-
-        println!("queue send message response: {response:?}");
 
         Ok(response)
     }

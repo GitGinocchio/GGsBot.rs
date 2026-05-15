@@ -6,7 +6,7 @@ use twilight_model::{
 use worker::RouteContext;
 
 use crate::{
-    CLIENT, COMMANDS, UIHANDLERS,
+    constants::{CLIENT, COMMANDS, UIHANDLERS},
     error::Error,
     framework::discord::response::{InteractionResponseExt, ResponseBuilder},
 };

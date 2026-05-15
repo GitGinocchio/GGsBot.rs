@@ -2,7 +2,7 @@ use serde::Serialize;
 use serde_json::Value;
 use worker::Env;
 
-use crate::{CLIENT, error::Error};
+use crate::{constants::CLIENT, error::Error};
 
 #[derive(Serialize, Default, Debug)]
 pub struct DiscordMessagePayload {

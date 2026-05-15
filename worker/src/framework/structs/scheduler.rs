@@ -1,7 +1,7 @@
 use worker::{Env, ScheduleContext, ScheduledEvent};
 
 use crate::{
-    TRIGGERS,
+    constants::TRIGGERS,
     error::Error,
     framework::traits::trigger::{CronSchedule, Trigger},
 };

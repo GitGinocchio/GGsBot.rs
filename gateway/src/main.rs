@@ -1,25 +1,44 @@
-use serenity::prelude::*;
+use twilight_gateway::{EventTypeFlags, Shard, ShardId, StreamExt};
 
-pub mod handlers;
 pub mod constants;
 pub mod dispatcher;
 
-use handlers::raw::RawHandler;
+use constants::{INTENTS, DISCORD_TOKEN};
+use twilight_model::gateway::event::DispatchEvent;
 
-use constants::INTENTS;
-use constants::DISCORD_TOKEN;
+use crate::constants::DISPATCHER;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
 
-    let mut client = Client::builder(&*DISCORD_TOKEN, INTENTS)
-        .raw_event_handler(RawHandler::default())
-        .await
-        .expect("Errore durante la creazione del client Discord");
+    let mut shard = Shard::new(
+        ShardId::ONE, 
+        DISCORD_TOKEN.clone(), 
+        INTENTS
+    );
 
-    println!("📡 Avvio del gateway in corso...");
-    if let Err(why) = client.start().await {
-        eprintln!("❌ Errore fatale del client: {:?}", why);
+    println!("📡 Avvio del gateway (Twilight) in corso...");
+
+    while let Some(item) = shard.next_event(EventTypeFlags::all()).await {
+        let event = match item {
+                Ok(event) => event,
+                Err(source) => {
+                    eprintln!("⚠️ Errore socket: {:?}", source);
+                    continue;
+                }
+            };
+
+        if let Ok(dispatch_event) = DispatchEvent::try_from(event.clone()) {
+            tokio::spawn(async move {
+                if let Err(e) = DISPATCHER.dispatch(&dispatch_event).await {
+                    eprintln!("❌ Dispatch error: {}", e);
+                }
+            }); 
+        } else {
+            println!("Evento ricevuto non di tipo DispatchEvent: {event:?}");
+        }
     }
+
+    Ok(())
 }

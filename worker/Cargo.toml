@@ -22,7 +22,7 @@ hex = "0.4.2"
 reqwest = { version = "0.13.3", features = ["json"] }
 async-trait = "0.1.57"
 chrono = { version = "0.4.44", features = ["serde"] }
-twilight-model = { version = "0.17.1" }
+twilight-model = { version = "0.17.1", features = [] }
 url = "2.5.8"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by

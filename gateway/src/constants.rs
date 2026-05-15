@@ -1,12 +1,44 @@
-use std::env;
+use std::{collections::HashMap, env, sync::LazyLock};
 
-use once_cell::sync::Lazy;
-use serenity::all::GatewayIntents;
 use reqwest::{Client, ClientBuilder, header::{self, HeaderValue}};
+use twilight_gateway::{EventType, EventTypeFlags, Intents};
 
-use crate::dispatcher::Dispatcher;
+use crate::dispatcher::{DispatchStrategy, Dispatcher};
 
-pub static CLIENT: Lazy<Client> = Lazy::new(|| {
+pub static DISPATCH_STRATEGIES: LazyLock<HashMap<EventType, DispatchStrategy>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    
+    map.insert(
+        EventType::MessageCreate,     
+        DispatchStrategy::AlwaysQueue { queue_delay: 10 }
+    );
+
+    map.insert(
+        EventType::MessageUpdate,     
+        DispatchStrategy::AlwaysQueue { queue_delay: 10 }
+    );
+
+    map.insert(
+        EventType::MessageDelete,     
+        DispatchStrategy::AlwaysQueue { queue_delay: 10 }
+    );
+    
+    map
+});
+
+pub static WANTED_EVENTS: LazyLock<EventTypeFlags> = LazyLock::new(|| {
+    EventTypeFlags::all()
+});
+
+pub const INTENTS: Intents = Intents::empty()
+    .union(Intents::GUILD_MESSAGES)
+    .union(Intents::MESSAGE_CONTENT)
+    .union(Intents::DIRECT_MESSAGES)
+    .union(Intents::GUILD_VOICE_STATES);
+
+pub static DISPATCHER: LazyLock<Dispatcher> = LazyLock::new(|| Dispatcher::new());
+
+pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(header::CONTENT_TYPE,HeaderValue::from_static("application/json"));
 
@@ -26,26 +58,18 @@ pub static CLIENT: Lazy<Client> = Lazy::new(|| {
         .expect("failed to create http client")
 });
 
-pub static DISPATCHER: Lazy<Dispatcher> = Lazy::new(|| Dispatcher::new());
-
-pub static HTTP_ENDPOINT: Lazy<String> = Lazy::new(|| {
+pub static HTTP_ENDPOINT: LazyLock<String> = LazyLock::new(|| {
     env::var("HTTP_ENDPOINT").expect("missing HTTP_ENDPOINT")
 });
 
-pub static QUEUE_ENDPOINT: Lazy<String> = Lazy::new(|| {
+pub static QUEUE_ENDPOINT: LazyLock<String> = LazyLock::new(|| {
     env::var("QUEUE_ENDPOINT").expect("missing QUEUE_ENDPOINT")
 });
 
-pub static AUTHORIZATION_TOKEN: Lazy<String> = Lazy::new(|| {
+pub static AUTHORIZATION_TOKEN: LazyLock<String> = LazyLock::new(|| {
     env::var("AUTHORIZATION_TOKEN").unwrap_or_default()
 });
 
-pub static DISCORD_TOKEN: Lazy<String> = Lazy::new(|| {
+pub static DISCORD_TOKEN: LazyLock<String> = LazyLock::new(|| {
     env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN")
 });
-
-pub const INTENTS: GatewayIntents = GatewayIntents::empty()
-    .union(GatewayIntents::GUILD_MESSAGES)
-    .union(GatewayIntents::MESSAGE_CONTENT)
-    .union(GatewayIntents::DIRECT_MESSAGES)
-    .union(GatewayIntents::GUILD_VOICE_STATES);

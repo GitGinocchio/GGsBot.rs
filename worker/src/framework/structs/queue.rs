@@ -1,6 +1,6 @@
 use worker::*;
 
-use crate::QUEUES;
+use crate::constants::QUEUES;
 
 /**
 Usage:

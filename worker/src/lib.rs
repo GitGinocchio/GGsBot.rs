@@ -1,65 +1,24 @@
-use reqwest::Client;
-use serde_json::{Value, json};
-use std::sync::LazyLock;
 use worker::*;
 
 use crate::{
-        framework::{
-            discord::{
-                bot::Bot,
-                command::{
-                    CommandMap, 
-                    SerializableCommand
-                },
-            }, 
-        structs::{
-            queue::QueueProcessor, 
-            scheduler::Scheduler
-        }, 
-        traits::{
-            queue::QueueMap, 
-            trigger::TriggerMap, 
-            ui::UiHandlerMap
-        }
-    }
+    constants::QueueMessage,
+    framework::structs::{
+        queue::QueueProcessor, 
+        scheduler::Scheduler
+    }, 
+    routes::api
 };
 
+mod constants;
 mod commands;
 mod error;
 mod framework;
 mod queues;
 mod services;
 mod triggers;
+mod routes;
 mod ui;
 mod utils;
-
-static CLIENT: LazyLock<Client> = LazyLock::new(|| Client::new());
-
-static UIHANDLERS: LazyLock<UiHandlerMap> = LazyLock::new(|| build_uihandlers!(
-    ui::nasa::NasaUIHandler
-));
-
-static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| {
-    build_commands!(
-        commands::hello::Hello,
-        commands::nasa::Nasa,
-        commands::bot::Bot,
-        commands::ext::Ext
-    )
-});
-
-static TRIGGERS: LazyLock<TriggerMap> = LazyLock::new(|| build_triggers!(
-    triggers::apod::ApodTrigger
-));
-
-static QUEUES: LazyLock<QueueMap> = LazyLock::new(|| build_queue_handlers!(
-    queues::apod::ApodQueue
-));
-
-build_queue_enum!(
-    Apod => queues::apod::ApodQueueMessage
-);
-
 
 #[event(queue)]
 pub async fn on_queue(
@@ -81,24 +40,9 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
     utils::set_panic_hook();
 
     Router::new()
-        .post_async("/api/interaction", async |req, ctx| {
-            Bot::new(ctx).handle(req).await
-        })
-        .post_async("/api/gateway", async |mut req, _ctx| {
-            let data: Value = req.json().await?;
-            worker::console_debug!("gateway data received: {data:?}");
-            Response::from_json(&json!({
-                "status" : "success"
-            }))
-        })
-        .get_async("/api/commands", |_req, _ctx| async move {
-            let commands: Vec<_> = COMMANDS
-                .values()
-                .map(|cmd| SerializableCommand(cmd.as_ref()))
-                .collect();
-
-            Response::from_json(&commands)
-        })
+        .post_async("/api/interaction", |req, ctx| api::interaction::post(req, ctx))
+        .post_async("/api/gateway", |req, ctx| api::gateway::post(req, ctx))
+        .get_async("/api/commands", |req, ctx| api::commands::get(req, ctx))
         .run(req, env)
         .await
 }

@@ -7,7 +7,7 @@ use url::Url;
 use worker::Env;
 
 use crate::{
-    CLIENT,
+    constants::CLIENT,
     error::Error,
     framework::{discord::embed::EmbedExt, traits::namespaces::KV_BINDING},
 };

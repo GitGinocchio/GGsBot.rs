@@ -12,7 +12,7 @@ use twilight_model::{
 use worker::RouteContext;
 
 use crate::{
-    COMMANDS,
+    constants::COMMANDS,
     commands::ext::REQUIRED_EXTENSIONS,
     error::Error,
     framework::discord::{
