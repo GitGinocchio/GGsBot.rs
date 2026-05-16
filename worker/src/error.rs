@@ -78,6 +78,7 @@ impl Error {
 
     pub fn as_interaction(&self, ray_id: &str) -> InteractionResponse {
         let (title, description) = match self {
+            Error::InteractionFailed(message) => ("Ops!", message.as_str()),
             _ => ("Ops!", "Something went wrong!"),
         };
 

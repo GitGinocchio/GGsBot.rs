@@ -22,7 +22,6 @@ use crate::{
     ui
 };
 
-
 pub static CLIENT: LazyLock<Client> = LazyLock::new(|| Client::new());
 
 pub static UIHANDLERS: LazyLock<UiHandlerMap> = LazyLock::new(|| build_uihandlers!(
@@ -34,7 +33,8 @@ pub static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| {
         commands::hello::Hello,
         commands::nasa::Nasa,
         commands::bot::Bot,
-        commands::ext::Ext
+        commands::ext::Ext,
+        commands::mods::Mods
     )
 });
 

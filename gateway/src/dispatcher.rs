@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
+use anyhow::Error;
 use reqwest::Response;
 use serde_json::{Value, json};
 use tokio::sync::Mutex;
@@ -10,9 +11,13 @@ use twilight_model::gateway::event::DispatchEvent;
 use crate::constants::{CLIENT, DISPATCH_STRATEGIES, HTTP_ENDPOINT, QUEUE_ENDPOINT};
 
 pub enum DispatchStrategy {
-    AlwaysQueue { queue_delay: u64 },
     Smart { queue_delay: u64 }, // based on rate-limiter/429
+    
     AlwaysWorker,
+    AlwaysQueue { queue_delay: u64 },
+
+    WorkerOnlyWhenAvailable,
+    QueueOnlyWhenUnavailable { queue_delay: u64 }
 }
 
 pub struct Dispatcher {
@@ -53,6 +58,20 @@ impl Dispatcher {
             DispatchStrategy::Smart { queue_delay } => {
                 self.send(&payload, *queue_delay).await
             },
+            DispatchStrategy::QueueOnlyWhenUnavailable { queue_delay } => {
+                if self.in_fallback_mode.load(Ordering::SeqCst) {
+                    return Err(Error::msg("Could not send event because gateway is on fallback mode"));
+                };
+
+                self.send_to_queue(&payload, *queue_delay).await
+            },
+            DispatchStrategy::WorkerOnlyWhenAvailable => {
+                if !self.in_fallback_mode.load(Ordering::SeqCst) {
+                    return Err(Error::msg("Could not send event because gateway is not on fallback mode"));
+                };
+
+                self.send_to_worker(&payload).await
+            }
         }
     }
 

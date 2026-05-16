@@ -25,7 +25,7 @@ impl Queue for ApodQueue {
         env: &Env,
         _ctx: &Context,
     ) -> Result<(), Error> {
-        let discord_service = DiscordService::new(env);
+        let discord_service = DiscordService::new(env)?;
         
         let apod_service = ApodService::new(env)?;
         let apod_data = apod_service.fetch_apod_with_retries(5).await?;
