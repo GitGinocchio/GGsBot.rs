@@ -16,8 +16,7 @@ pub enum DispatchStrategy {
     AlwaysWorker,
     AlwaysQueue { queue_delay: u64 },
 
-    WorkerOnlyWhenAvailable,
-    QueueOnlyWhenUnavailable { queue_delay: u64 }
+    WorkerOnly // Use worker only when available
 }
 
 pub struct Dispatcher {
@@ -44,7 +43,10 @@ impl Dispatcher {
 
         println!("📥 [EVENT] {:?}", kind);
 
-        let payload = serde_json::to_value(event)?;
+        let payload = json!({
+            "kind" : kind,
+            "event": serde_json::to_value(event)?
+        });
 
         match strategy {
             DispatchStrategy::AlwaysQueue { queue_delay } => {
@@ -58,14 +60,9 @@ impl Dispatcher {
             DispatchStrategy::Smart { queue_delay } => {
                 self.send(&payload, *queue_delay).await
             },
-            DispatchStrategy::QueueOnlyWhenUnavailable { queue_delay } => {
-                if self.in_fallback_mode.load(Ordering::SeqCst) {
-                    return Err(Error::msg("Could not send event because gateway is on fallback mode"));
-                };
+            DispatchStrategy::WorkerOnly => {
+                println!("  ↳ ⚡ [ROUTE] Strategia: WorkerOnly");
 
-                self.send_to_queue(&payload, *queue_delay).await
-            },
-            DispatchStrategy::WorkerOnlyWhenAvailable => {
                 if !self.in_fallback_mode.load(Ordering::SeqCst) {
                     return Err(Error::msg("Could not send event because gateway is not on fallback mode"));
                 };

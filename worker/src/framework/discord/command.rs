@@ -2,9 +2,9 @@ use async_trait::async_trait;
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;
 use twilight_model::{
-    application::command::{
+    application::{command::{
         Command as DiscordCommand, CommandOption, CommandOptionType, CommandType,
-    },
+    }, interaction::InteractionContextType},
     guild::Permissions,
     oauth::ApplicationIntegrationType,
 };
@@ -18,7 +18,7 @@ use twilight_model::{
 };
 use worker::RouteContext;
 
-use crate::handle_subcommands;
+use crate::{framework::traits::command::CommandEvents, handle_subcommands};
 use crate::{error::Error, framework::traits::command::CommandController};
 
 pub type CommandMap = HashMap<String, Box<dyn Command + Send + Sync>>;
@@ -76,6 +76,10 @@ pub trait Command {
         vec![]
     }
 
+    fn interaction_contexts(&self) -> Vec<InteractionContextType> {
+        vec![]
+    }
+
     fn default_member_permissions(&self) -> Option<Permissions> {
         None
     }
@@ -100,6 +104,11 @@ pub trait Command {
 
     #[allow(unused)]
     fn get_controller(&self) -> Option<&dyn CommandController> {
+        None
+    }
+
+    #[allow(unused)]
+    fn get_events(&self) -> Option<&dyn CommandEvents> {
         None
     }
 }
@@ -130,12 +139,13 @@ impl<'a> Serialize for SerializableCommand<'a> {
                     min_length: None,
                     min_value: None,
                     name_localizations: None,
-                    required: None,
+                    required: None
                 });
             }
         }
 
         let itypes = self.0.integration_types();
+        let icontexts = self.0.interaction_contexts();
 
         let discord_cmd = DiscordCommand {
             name: self.0.name(),
@@ -150,7 +160,11 @@ impl<'a> Serialize for SerializableCommand<'a> {
             version: Id::new(1),
             name_localizations: None,
             description_localizations: None,
-            contexts: None,
+            contexts: if icontexts.is_empty() {
+                None
+            } else {
+                Some(icontexts)
+            },
             #[allow(deprecated)]
             dm_permission: None,
             integration_types: if itypes.is_empty() {

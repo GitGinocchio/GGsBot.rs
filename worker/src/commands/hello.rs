@@ -3,8 +3,7 @@ use twilight_model::{
     application::{
         command::{CommandOption, CommandOptionType},
         interaction::{
-            Interaction,
-            application_command::{CommandData, CommandOptionValue},
+            Interaction, InteractionContextType, application_command::{CommandData, CommandOptionValue}
         },
     },
     http::interaction::{InteractionResponse, InteractionResponseType},
@@ -23,19 +22,7 @@ use crate::{
 #[derive(Default)]
 pub struct Hello;
 
-/*
-#[async_trait(?Send)]
-impl CommandController for Hello {
-    async fn on_setup(
-        &self,
-        interaction: &Interaction,
-        ctx: &mut RouteContext<()>
-    ) -> Option<Result<InteractionResponse, Error>> {
-        let page = crate::ui::hello::HelloUiHandler::default();
-        Some(Ok(page.render(0).await))
-    }
-}
-*/
+
 
 #[async_trait(?Send)]
 impl Command for Hello {
@@ -45,6 +32,10 @@ impl Command for Hello {
 
     fn description(&self) -> String {
         "Saluta qualcuno nella chat!".into()
+    }
+
+    fn interaction_contexts(&self) -> Vec<InteractionContextType> {
+        vec![InteractionContextType::PrivateChannel, InteractionContextType::Guild]
     }
 
     fn options(&self) -> Vec<CommandOption> {

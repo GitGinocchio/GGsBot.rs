@@ -77,9 +77,9 @@ impl DiscordService {
         Ok(messages)
     }
 
-    pub async fn delete_messages_bulk(&self, channel_id: &str, amount: u8) -> Result<usize, Error> {
-        if amount < 2 || amount > 100 {
-            return Err(Error::InteractionFailed("Il bulk delete richiede tra i 2 e i 100 messaggi.".into()));
+    pub async fn delete_messages(&self, channel_id: &str, amount: u8) -> Result<usize, Error> {
+        if amount < 1 || amount > 100 {
+            return Err(Error::InteractionFailed("Il delete richiede tra 1 e i 100 messaggi.".into()));
         }
 
         let messages = self.fetch_messages(channel_id, amount).await?;
@@ -103,23 +103,34 @@ impl DiscordService {
             .map(|msg| msg.id.get().to_string())
             .collect();
 
-        if message_ids.len() < 2 {
+        if message_ids.is_empty() {
             return Err(Error::InteractionFailed("I messaggi trovati sono troppo vecchi (>14 giorni) o insufficienti per il bulk delete.".into()));
         }
 
-        let payload = json!({ "messages": message_ids });
+        if message_ids.len() == 1 {
+            let message_id = &message_ids[0];
+            let response = CLIENT
+                .delete(format!("{}/channels/{}/messages/{}", DISCORD_API_ENDPOINT, channel_id, message_id))
+                .header("Authorization", format!("Bot {}", self.token))
+                .send()
+                .await?;
 
-        let response: Value = CLIENT
-            .post(format!("{}/channels/{}/messages/bulk-delete",DISCORD_API_ENDPOINT, channel_id))
-            .header("Authorization", format!("Bot {}", self.token))
-            .json(&payload)
-            .send()
-            .await?
-            .json()
-            .await?;
+            worker::console_debug!("[delete_single] response status: {:?}", response.status());
+        } else {
+            let payload = json!({ "messages": message_ids });
 
-        worker::console_debug!("[delete_bulk] response: {response:?}");
+            let response: Value = CLIENT
+                .post(format!("{}/channels/{}/messages/bulk-delete",DISCORD_API_ENDPOINT, channel_id))
+                .header("Authorization", format!("Bot {}", self.token))
+                .json(&payload)
+                .send()
+                .await?
+                .json()
+                .await?;
 
-        Ok(message_ids.iter().count())
+            worker::console_debug!("[delete_bulk] response: {response:?}");
+        }
+
+        Ok(message_ids.len())
     }
 }

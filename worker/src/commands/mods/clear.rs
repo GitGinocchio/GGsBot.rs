@@ -3,8 +3,7 @@ use twilight_model::{
     application::{
         command::{CommandOption, CommandOptionType},
         interaction::{
-            Interaction,
-            application_command::{CommandData, CommandOptionValue},
+            Interaction, InteractionContextType, application_command::{CommandData, CommandOptionValue}
         },
     },
     http::interaction::{InteractionResponse, InteractionResponseType},
@@ -29,6 +28,10 @@ impl Command for Clear {
 
     fn description(&self) -> String {
         "Elimina i messaggi da una chat!".into()
+    }
+
+    fn interaction_contexts(&self) -> Vec<InteractionContextType> {
+        vec![InteractionContextType::Guild]
     }
 
     fn options(&self) -> Vec<CommandOption> {
@@ -69,7 +72,7 @@ impl Command for Clear {
             .get();
 
         let discord = DiscordService::new(&ctx.env)?;
-        let num_deleted = discord.delete_messages_bulk(&channel_id.to_string(), amount as u8).await?;
+        let num_deleted = discord.delete_messages(&channel_id.to_string(), amount as u8).await?;
 
         let response = ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
             .content(format!("🗑️ Eliminati **{}** messaggi.", num_deleted))

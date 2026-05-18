@@ -1,6 +1,12 @@
 use async_trait::async_trait;
+use serde_json::Value;
 use twilight_model::{
-    application::interaction::Interaction, http::interaction::InteractionResponse,
+    application::interaction::Interaction, 
+    gateway::{
+        event::{DispatchEvent, EventType}, 
+        payload::incoming::*
+    }, 
+    http::interaction::InteractionResponse
 };
 use worker::RouteContext;
 
@@ -54,5 +60,30 @@ pub trait CommandController {
         ctx: &mut RouteContext<()>,
     ) -> Option<Result<InteractionResponse, Error>> {
         None
+    }
+}
+
+#[async_trait(?Send)]
+pub trait CommandEvents {
+    fn responds_to(&self, _event_type: EventType) -> bool {
+        false
+    }
+
+    async fn on_message_create(&self, _ctx: &RouteContext<()>, _payload: MessageCreate) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_message_update(&self, _ctx: &RouteContext<()>, _payload: MessageUpdate) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_message_delete(&self, _ctx: &RouteContext<()>, _payload: MessageDelete) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_message_delete_bulk(&self, _ctx: &RouteContext<()>, _payload: MessageDeleteBulk) -> Result<Value, Error> { Ok(Value::Null) }
+
+    async fn dispatch(&self, ctx: &RouteContext<()>, event: DispatchEvent) -> Result<Value, Error> {
+        match event {
+            DispatchEvent::MessageCreate(m) => self.on_message_create(ctx, *m).await,
+            DispatchEvent::MessageUpdate(m) => self.on_message_update(ctx, *m).await,
+            DispatchEvent::MessageDelete(m) => self.on_message_delete(ctx, m).await,
+            DispatchEvent::MessageDeleteBulk(m) => self.on_message_delete_bulk(ctx, m).await,
+            e => {
+                worker::console_warn!("Unhandled event: {e:?}");
+                Ok(Value::Null)
+            }
+        }
     }
 }

@@ -51,7 +51,6 @@ impl UiHandler for NasaUIHandler {
             ["p1", "channel"] => {
                 let guild_kv = interaction.guild_kv(&ctx.env)?;
 
-                // TODO: Gestire il caso in cui non venga trovvato :pending
                 if let Some(ext_data) = guild_kv.get("extensions:nasa:config:pending").await? {
                     let mut ext_config: ExtensionConfig<NasaExtConfig> = serde_json::from_str(&ext_data)?;
                     let nasa_config = ext_config.config.get_or_insert_default();
@@ -64,6 +63,9 @@ impl UiHandler for NasaUIHandler {
 
                     let serialized = serde_json::to_string(&ext_config)?;
                     guild_kv.put("extensions:nasa:config:pending", serialized, Some(3600)).await?;
+                } else {
+                    // Interazione scaduta...
+                    return interaction.delete(ctx).await;
                 }
 
                 render_page = true;

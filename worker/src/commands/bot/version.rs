@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use twilight_model::{
-    application::interaction::{Interaction, application_command::CommandData},
+    application::interaction::{Interaction, InteractionContextType, application_command::CommandData},
     http::interaction::{InteractionResponse, InteractionResponseType},
 };
 use worker::{RouteContext, WorkerVersionMetadata};
@@ -23,6 +23,10 @@ impl Command for Version {
 
     fn description(&self) -> String {
         "Mostra la versione del bot!".into()
+    }
+
+    fn interaction_contexts(&self) -> Vec<InteractionContextType> {
+        vec![InteractionContextType::PrivateChannel, InteractionContextType::Guild]
     }
 
     async fn respond(

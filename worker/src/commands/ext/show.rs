@@ -88,16 +88,18 @@ impl Command for Show {
         }
 
         let mut unused_field = String::new();
-        for (name, _) in COMMANDS.iter() {
+        for (name, command) in COMMANDS.iter() {
             if REQUIRED_EXTENSIONS.contains(&name.as_str()) {
                 continue;
             };
+
             if status_map.contains_key(name) {
                 continue;
             };
 
-            // TODO: Aggiungere un check per includere nei comandi inutilizzati
-            // solo quelli che hanno un CommandController
+            if command.get_controller().is_none() {
+                continue;
+            }
 
             unused_field.push_str(&format!("- *{}*\n", capitalize(name)))
         }
