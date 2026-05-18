@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use twilight_model::{
-    application::interaction::{Interaction, application_command::CommandData},
+    application::interaction::{Interaction, InteractionContextType, application_command::CommandData},
     http::interaction::{InteractionResponse, InteractionResponseType},
     oauth::ApplicationIntegrationType,
 };
@@ -32,10 +32,11 @@ impl Command for Apod {
     }
 
     fn integration_types(&self) -> Vec<ApplicationIntegrationType> {
-        vec![
-            ApplicationIntegrationType::GuildInstall,
-            ApplicationIntegrationType::UserInstall,
-        ]
+        vec![ApplicationIntegrationType::GuildInstall, ApplicationIntegrationType::UserInstall]
+    }
+
+    fn interaction_contexts(&self) -> Vec<InteractionContextType> {
+        vec![InteractionContextType::Guild, InteractionContextType::PrivateChannel]
     }
 
     async fn respond(
@@ -44,7 +45,7 @@ impl Command for Apod {
         _data: &CommandData,
         ctx: &mut RouteContext<()>,
     ) -> Result<InteractionResponse, Error> {
-        interaction.defer(true).await?;
+        interaction.defer(if interaction.is_dm() { false } else { true }).await?;
 
         let service = ApodService::new(&ctx.env)?;
         let data = service.get_apod().await?;

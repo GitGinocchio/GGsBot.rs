@@ -78,8 +78,7 @@ impl Command for Disable {
         let key = format!("extensions:{ext}:config"); //guilds:{guild_id}:extensions:{ext_name}:config
         let maybe_config = guild_kv.get(&key).await.map_err(|e| Error::KvError(e))?;
 
-        let mut config: ExtensionConfig<serde_json::Value> = if let Some(serialized) = maybe_config
-        {
+        let mut config: ExtensionConfig<serde_json::Value> = if let Some(serialized) = maybe_config {
             serde_json::from_str(&serialized).map_err(|e| Error::JsonFailed(e))?
         } else {
             let embed = ERROR_EMBED

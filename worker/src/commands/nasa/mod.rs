@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use twilight_model::{application::interaction::Interaction, http::interaction::InteractionResponse, oauth::ApplicationIntegrationType};
+use twilight_model::{application::interaction::{Interaction, InteractionContextType}, http::interaction::InteractionResponse, oauth::ApplicationIntegrationType};
 use worker::RouteContext;
 
 use crate::{
@@ -62,6 +62,10 @@ impl Command for Nasa {
             ApplicationIntegrationType::GuildInstall,
             ApplicationIntegrationType::UserInstall,
         ]
+    }
+
+    fn interaction_contexts(&self) -> Vec<InteractionContextType> {
+        vec![InteractionContextType::Guild, InteractionContextType::PrivateChannel]
     }
 
     fn subcommands(&self) -> CommandMap {
