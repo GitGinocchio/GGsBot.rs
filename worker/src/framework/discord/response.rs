@@ -1,5 +1,5 @@
 use twilight_model::{
-    application::command::CommandOptionChoice,
+    application::command::{CommandOptionChoice},
     channel::message::{AllowedMentions, Component, Embed, MessageFlags},
     http::{
         attachment::Attachment,
@@ -22,17 +22,29 @@ pub struct InteractionUpdateResponse {
 pub trait InteractionResponseExt {
     fn new(kind: InteractionResponseType) -> Self;
     fn set_kind(&mut self, kind: InteractionResponseType);
+    
     fn set_content(&mut self, content: impl Into<String>);
+    
     fn set_components(&mut self, components: Vec<Component>);
     fn push_component(&mut self, component: Component);
+    
     fn set_embeds(&mut self, embeds: Vec<Embed>);
+    
     fn set_ephemeral(&mut self);
+    
     fn set_tts(&mut self, tts: bool);
+    
     fn set_allowed_mentions(&mut self, mentions: AllowedMentions);
+    
     fn set_attachments(&mut self, attachments: Vec<Attachment>);
+    
     fn set_choices(&mut self, choices: Vec<CommandOptionChoice>);
+    fn add_choice(&mut self, choice: CommandOptionChoice) -> bool;
+    
     fn set_custom_id(&mut self, id: impl Into<String>);
+    
     fn set_title(&mut self, title: impl Into<String>);
+    
     fn set_poll(&mut self, poll: Poll);
 
     fn empty() -> InteractionResponse;
@@ -122,6 +134,20 @@ impl InteractionResponseExt for InteractionResponse {
         self.data
             .get_or_insert_with(InteractionResponseData::default)
             .choices = Some(choices);
+    }
+
+    fn add_choice(&mut self, choice: CommandOptionChoice) -> bool {
+        let choices = self.data
+                .get_or_insert_with(InteractionResponseData::default)
+                .choices
+                .get_or_insert_default();
+
+        if choices.len() < 25 {
+            choices.push(choice);
+            return true;
+        }
+
+        false
     }
 
     fn set_custom_id(&mut self, id: impl Into<String>) {

@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use serde_json::Value;
 use twilight_model::{
     application::{
         command::{CommandOption, CommandOptionChoiceValue, CommandOptionType},
@@ -12,16 +13,9 @@ use twilight_model::{
 use worker::RouteContext;
 
 use crate::{
-    constants::COMMANDS,
-    commands::ext::REQUIRED_EXTENSIONS,
-    error::Error,
-    framework::discord::{
-        command::{Command, CommandDataExt},
-        option::{CommandOptionExt, OptionBuilder},
-        response::InteractionResponseExt,
-    },
-    framework::traits::namespaces::KvExt,
-    ui::embeds::{default::DEFAULT_EMBED, error::ERROR_EMBED},
+    commands::ext::REQUIRED_EXTENSIONS, constants::COMMANDS, error::Error, framework::{discord::{
+        autocomplete::Autocomplete, command::{Command, CommandDataExt}, option::{CommandOptionExt, OptionBuilder}, response::InteractionResponseExt
+    }, structs::config::extension::ExtensionConfig, traits::namespaces::KvExt}, ui::embeds::{default::DEFAULT_EMBED, error::ERROR_EMBED}
 };
 
 #[derive(Default)]
@@ -38,25 +32,73 @@ impl Command for Teardown {
     }
 
     fn options(&self) -> Vec<CommandOption> {
-        let mut ext = OptionBuilder::new(
+        let ext = OptionBuilder::new(
             CommandOptionType::String,
             "extension",
             "L'estensione da rimuovere",
         )
+        .autocomplete(true)
         .required(true)
         .build();
-
-        for (name, _) in COMMANDS.iter() {
-            if REQUIRED_EXTENSIONS.contains(&name.as_str()) {
-                continue;
-            };
-            ext.add_choice(name, CommandOptionChoiceValue::String(name.clone()));
-        }
 
         vec![ext]
     }
 
-    // TODO: aggiungere un autocomplete per inserire solo i comandi che sono configurati attualmente
+    async fn autocomplete(
+        &self,
+        interaction: &Interaction,
+        data: &CommandData,
+        ctx: &mut RouteContext<()>,
+    ) -> Result<Option<InteractionResponse>, Error> {
+        let guild_kv = interaction.guild_kv(&ctx.env)?;
+        let mut autocomplete = Autocomplete::new();
+
+        let user_input = match data.get_option("extension") {
+            Some(CommandOptionValue::String(val)) => val.to_lowercase(),
+            _ => "".to_string(),
+        };
+
+        let keys_to_check: Vec<String> = COMMANDS
+            .iter()
+            .filter(|(name, command)| {
+                command.get_controller().is_some() &&
+                !REQUIRED_EXTENSIONS.contains(&name.as_str()) && 
+                if !name.is_empty() { name.to_lowercase().contains(&user_input) } else { true }
+            })
+            .map(|(name, _)| format!("extensions:{name}"))
+            .collect();
+
+        let results = guild_kv
+            .get_json_bulk::<ExtensionConfig<Value>>(&keys_to_check)
+            .await?;
+
+        for name in keys_to_check {
+            let is_selectable = match results.get(&name) {
+                Some(Some(_)) => true,
+                Some(None) => false,
+                None => false
+            };
+
+            let ext_name = match name.split(":").nth(3) {
+                Some(name) => name.to_string(),
+                None => continue
+            };
+
+            if is_selectable {
+                let was_added = autocomplete.add_choice(
+                    ext_name.clone(),
+                    CommandOptionChoiceValue::String(ext_name),
+                    None,
+                );
+
+                if !was_added {
+                    break;
+                }
+            }
+        }
+
+        Ok(Some(autocomplete.build()))
+    }
 
     async fn respond(
         &self,

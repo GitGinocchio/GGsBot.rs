@@ -18,7 +18,7 @@ use twilight_model::{
 };
 use worker::RouteContext;
 
-use crate::{framework::traits::command::CommandEvents, handle_subcommands};
+use crate::{framework::traits::command::CommandEvents, handle_subcommands, handle_subcommands_autocomplete};
 use crate::{error::Error, framework::traits::command::CommandController};
 
 pub type CommandMap = HashMap<String, Box<dyn Command + Send + Sync>>;
@@ -59,6 +59,7 @@ impl CommandDataExt for CommandData {
     }
 }
 
+#[allow(unused)]
 #[async_trait(?Send)]
 pub trait Command {
     fn name(&self) -> String;
@@ -93,21 +94,19 @@ pub trait Command {
         handle_subcommands!(self, data, interaction, ctx)
     }
 
-    #[allow(unused_variables)]
     async fn autocomplete(
         &self,
+        interaction: &Interaction,
         data: &CommandData,
         ctx: &mut RouteContext<()>,
     ) -> Result<Option<InteractionResponse>, Error> {
-        Ok(None)
+        handle_subcommands_autocomplete!(self, interaction, data, ctx)
     }
 
-    #[allow(unused)]
     fn get_controller(&self) -> Option<&dyn CommandController> {
         None
     }
 
-    #[allow(unused)]
     fn get_events(&self) -> Option<&dyn CommandEvents> {
         None
     }
@@ -130,7 +129,7 @@ impl<'a> Serialize for SerializableCommand<'a> {
                     name: sub.name(),
                     description: sub.description(),
                     options: Some(sub.options()),
-                    autocomplete: None,
+                    autocomplete: Some(true),
                     channel_types: None,
                     choices: None,
                     description_localizations: None,
@@ -212,6 +211,27 @@ macro_rules! handle_subcommands {
 
         Err(Error::Generic(
             "No response was created for this subcommand!".into(),
+        ))
+    }};
+}
+
+#[macro_export]
+macro_rules! handle_subcommands_autocomplete {
+    ($self:expr, $interaction:expr, $data:expr, $ctx:expr) => {{
+        let sub_name = $data
+            .get_subcommand_name()
+            .ok_or(Error::Generic("Could not get subcommand_name for autocomplete".into()))?;
+        let sub_data = $data
+            .get_subcommand_data()
+            .ok_or(Error::Generic("Could not get subcommand_data for autocomplete".into()))?;
+
+        let subs = $self.subcommands();
+        if let Some(sub_cmd) = subs.get(sub_name) {
+            return sub_cmd.autocomplete($interaction, &sub_data, $ctx).await;
+        }
+
+        Err(Error::Generic(
+            format!("No autocomplete handler found for subcommand '{}'", sub_name)
         ))
     }};
 }

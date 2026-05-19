@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use serde::de::DeserializeOwned;
 use worker::KvError;
 use worker::kv::{KvStore, ListResponse};
 use worker::web_sys::ReadableStream;
@@ -49,6 +50,11 @@ impl NamespacedKv {
     }
 
     #[allow(unused)]
+    pub async fn get_json<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>, KvError> {
+        self.store.get(&self.format_key(key)).json::<T>().await
+    }
+
+    #[allow(unused)]
     pub async fn get_bulk(
         &self,
         keys: &[impl AsRef<str>],
@@ -57,6 +63,17 @@ impl NamespacedKv {
             keys.iter().map(|k| self.format_key(k.as_ref())).collect();
 
         self.store.get_bulk(&formatted_keys).text().await
+    }
+
+    #[allow(unused)]
+    pub async fn get_json_bulk<T: DeserializeOwned>(
+        &self,
+        keys: &[impl AsRef<str>],
+    ) -> Result<HashMap<String, Option<T>>, KvError> {
+        let formatted_keys: Vec<String> =
+            keys.iter().map(|k| self.format_key(k.as_ref())).collect();
+
+        self.store.get_bulk(&formatted_keys).json::<T>().await
     }
 
     #[allow(unused)]

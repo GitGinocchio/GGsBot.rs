@@ -6,3 +6,4 @@ pub mod interaction;
 pub mod option;
 pub mod response;
 pub mod verification;
+pub mod autocomplete;

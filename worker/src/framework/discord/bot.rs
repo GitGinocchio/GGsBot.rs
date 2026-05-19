@@ -33,6 +33,7 @@ impl Bot {
         };
 
         worker::console_debug!("[RayID: {ray_id}] Interaction started");
+        worker::console_debug!("[RayID: {ray_id}] Interaction payload: {interaction:?}");
         match interaction.perform(&mut self.ctx).await {
             Ok(response) => {
                 worker::console_log!(

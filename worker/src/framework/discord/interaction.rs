@@ -54,7 +54,7 @@ impl InteractionExt for Interaction {
         };
 
         if let Some(command) = COMMANDS.get(data.name.as_str()) {
-            match command.autocomplete(data, ctx).await {
+            match command.autocomplete(&self, data, ctx).await {
                 Ok(Some(response)) => return Ok(response),
                 Ok(None) => {
                     return Err(Error::InteractionFailed(

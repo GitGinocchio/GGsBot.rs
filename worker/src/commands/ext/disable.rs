@@ -1,7 +1,8 @@
 use async_trait::async_trait;
+use serde_json::Value;
 use twilight_model::{
     application::{
-        command::{CommandOption, CommandOptionChoiceValue, CommandOptionType},
+        command::{CommandOption, CommandOptionChoice, CommandOptionChoiceValue, CommandOptionType},
         interaction::{
             Interaction,
             application_command::{CommandData, CommandOptionValue},
@@ -12,17 +13,8 @@ use twilight_model::{
 use worker::RouteContext;
 
 use crate::{
-    constants::COMMANDS,
-    commands::ext::REQUIRED_EXTENSIONS,
-    error::Error,
-    framework::discord::{
-        command::{Command, CommandDataExt},
-        option::{CommandOptionExt, OptionBuilder},
-        response::InteractionResponseExt,
-    },
-    framework::structs::config::extension::ExtensionConfig,
-    framework::traits::namespaces::KvExt,
-    ui::embeds::{default::DEFAULT_EMBED, error::ERROR_EMBED},
+    commands::ext::REQUIRED_EXTENSIONS, constants::COMMANDS, error::Error, framework::{discord::{autocomplete::Autocomplete, command::{Command, CommandDataExt}, interaction::InteractionExt, option::{CommandOptionExt, OptionBuilder}, response::InteractionResponseExt
+    }, structs::config::extension::ExtensionConfig, traits::namespaces::KvExt}, ui::embeds::{default::DEFAULT_EMBED, error::ERROR_EMBED}
 };
 
 #[derive(Default)]
@@ -39,22 +31,63 @@ impl Command for Disable {
     }
 
     fn options(&self) -> Vec<CommandOption> {
-        let mut ext = OptionBuilder::new(
+        let ext = OptionBuilder::new(
             CommandOptionType::String,
             "extension",
             "L'estensione da disabilitare",
         )
+        .autocomplete(true)
         .required(true)
         .build();
 
-        for (name, _) in COMMANDS.iter() {
-            if REQUIRED_EXTENSIONS.contains(&name.as_str()) {
-                continue;
+        vec![ext]
+    }
+
+    async fn autocomplete(
+        &self,
+        interaction: &Interaction,
+        data: &CommandData,
+        ctx: &mut RouteContext<()>,
+    ) -> Result<Option<InteractionResponse>, Error> {
+        let guild_kv = interaction.guild_kv(&ctx.env)?;
+
+        let mut autocomplete = Autocomplete::new();
+
+        let user_input = match data.get_option("extension") {
+            Some(CommandOptionValue::String(val)) => val.to_lowercase(),
+            _ => "".to_string(),
+        };
+
+        let extensions_keys: Vec<String> = guild_kv
+            .list(Some(format!("extensions:{user_input}")), Some(25), None)
+            .await?
+            .keys
+            .iter_mut()
+            .map(|k| k.name.clone())
+            .collect();
+
+        let extensions = guild_kv.get_json_bulk::<ExtensionConfig<Value>>(&extensions_keys).await?;
+
+        for (ext, maybe_config) in extensions {
+            let Some(config) = maybe_config else { continue; };
+
+            let ext_name = match ext.split(":").nth(3) {
+                Some(name) => name.to_string(),
+                None => continue
             };
-            ext.add_choice(name, CommandOptionChoiceValue::String(name.clone()));
+
+            if config.enabled {
+                autocomplete.add_choice(
+                    ext_name.to_string(), 
+                    CommandOptionChoiceValue::String(ext_name),
+                    None
+                );
+            }
         }
 
-        vec![ext]
+        worker::console_debug!("choices:{:?}", autocomplete.get_choices());
+
+        Ok(Some(autocomplete.build()))
     }
 
     async fn respond(

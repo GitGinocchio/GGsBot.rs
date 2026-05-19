@@ -8,8 +8,8 @@
 >
 > (NOTA: A questo punto non e' piu' possibile fare /ext setup nasa)
 
-- [ ] Rendere il comando /nasa apod accessibile anche nelle chat private e (in quel caso) rimuovere ephemeral
-- [ ] Modificare i comando /ext setup, /ext teardown, ... in modo che mostrino solo i comandi configurabili
+- [x] Rendere il comando /nasa apod accessibile anche nelle chat private e (in quel caso) rimuovere ephemeral
+- [x] Modificare i comando /ext setup, /ext teardown, ... in modo che mostrino solo i comandi configurabili
 
 ## Credits
 
