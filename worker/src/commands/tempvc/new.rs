@@ -1,12 +1,14 @@
 use async_trait::async_trait;
 use twilight_model::{
-    application::interaction::{Interaction, application_command::CommandData},
-    channel::message::MessageFlags,
-    http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType},
+    application::{command::{CommandOption, CommandOptionType}, interaction::{
+        Interaction, 
+        application_command::CommandData
+    }}, 
+    http::interaction::InteractionResponse
 };
 use worker::RouteContext;
 
-use crate::{error::Error, framework::discord::command::Command};
+use crate::{error::Error, framework::discord::{command::Command, option::OptionBuilder, response::InteractionResponseExt}};
 
 #[derive(Default)]
 pub struct New;
@@ -18,7 +20,20 @@ impl Command for New {
     }
 
     fn description(&self) -> String {
-        "Crea un canale vocale personalizzato!".into()
+        "Aggiungi un generatore di canali temporanei per questo server!".into()
+    }
+
+    fn options(&self) -> Vec<CommandOption> {
+        // TODO: Inserire i channel_types dopo aver aggiunto un metodo nel builder
+        // per renderlo possibile
+        vec![
+            OptionBuilder::new(
+                CommandOptionType::Channel, 
+                "channel", 
+                "Canale usato per generare i canali vocali temporanei"
+            )
+            .build()
+        ]
     }
 
     async fn respond(
@@ -27,13 +42,6 @@ impl Command for New {
         _data: &CommandData,
         _ctx: &mut RouteContext<()>,
     ) -> Result<InteractionResponse, Error> {
-        Ok(InteractionResponse {
-            kind: InteractionResponseType::ChannelMessageWithSource,
-            data: Some(InteractionResponseData {
-                content: None,
-                flags: Some(MessageFlags::EPHEMERAL),
-                ..Default::default()
-            }),
-        })
+        Ok(InteractionResponse::empty())
     }
 }

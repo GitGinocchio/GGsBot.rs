@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use serde_json::Value;
 use twilight_model::{
     application::{
-        command::{CommandOption, CommandOptionChoice, CommandOptionChoiceValue, CommandOptionType},
+        command::{CommandOption, CommandOptionChoiceValue, CommandOptionType},
         interaction::{
             Interaction,
             application_command::{CommandData, CommandOptionValue},
@@ -13,8 +13,21 @@ use twilight_model::{
 use worker::RouteContext;
 
 use crate::{
-    commands::ext::REQUIRED_EXTENSIONS, constants::COMMANDS, error::Error, framework::{discord::{autocomplete::Autocomplete, command::{Command, CommandDataExt}, interaction::InteractionExt, option::{CommandOptionExt, OptionBuilder}, response::InteractionResponseExt
-    }, structs::config::extension::ExtensionConfig, traits::namespaces::KvExt}, ui::embeds::{default::DEFAULT_EMBED, error::ERROR_EMBED}
+    error::Error, 
+    framework::{
+        discord::{
+            autocomplete::Autocomplete, 
+            command::{Command, CommandDataExt}, 
+            option::OptionBuilder, 
+            response::InteractionResponseExt
+        }, 
+        structs::config::extension::ExtensionConfig, 
+        traits::namespaces::KvExt
+    }, 
+    ui::embeds::{
+        default::DEFAULT_EMBED, 
+        error::ERROR_EMBED
+    }
 };
 
 #[derive(Default)]
@@ -63,6 +76,7 @@ impl Command for Disable {
             .await?
             .keys
             .iter_mut()
+            .filter(|k| !k.name.ends_with(":config:pending"))
             .map(|k| k.name.clone())
             .collect();
 

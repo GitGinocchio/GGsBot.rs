@@ -33,8 +33,10 @@ pub static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| {
         commands::hello::Hello,
         commands::nasa::Nasa,
         commands::bot::Bot,
-        commands::ext::Ext,
-        commands::mods::Mods
+        commands::mods::Mods,
+        commands::tempvc::Tempvc,
+
+        commands::ext::Ext
     )
 });
 

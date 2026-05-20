@@ -16,7 +16,7 @@ pub struct ApodQueue;
 #[async_trait(?Send)]
 impl Queue for ApodQueue {
     fn name(&self) -> &str {
-        "ggsbotrs-apod-queue"
+        "ggsbotrs-tasks-queue"
     }
 
     async fn handle(

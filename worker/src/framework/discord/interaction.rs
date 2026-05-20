@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use serde_json::Value;
 use twilight_model::{
     application::interaction::{Interaction, InteractionData, InteractionType},
     http::interaction::{InteractionResponse, InteractionResponseType},
@@ -8,7 +9,7 @@ use worker::RouteContext;
 use crate::{
     constants::{CLIENT, COMMANDS, UIHANDLERS},
     error::Error,
-    framework::discord::response::{InteractionResponseExt, ResponseBuilder},
+    framework::{discord::response::{InteractionResponseExt, ResponseBuilder}, structs::config::extension::ExtensionConfig, traits::namespaces::KvExt}, ui::embeds::error::ERROR_EMBED,
 };
 
 #[async_trait(?Send)]
@@ -108,6 +109,31 @@ impl InteractionExt for Interaction {
         };
 
         if let Some(command) = COMMANDS.get(data.name.as_str()) {
+            if command.get_controller().is_some() {
+                let guild_kv = self.guild_kv(&ctx.env)?;
+
+                let maybe_config = guild_kv
+                    .get_json::<ExtensionConfig<Value>>(&format!("extensions:{}:config", data.name))
+                    .await?;
+
+                match maybe_config {
+                    Some(ExtensionConfig { enabled: false, .. }) | None => {
+                        let embed = ERROR_EMBED.clone()
+                            .description(format!("Extension '{}' is not {} for this guild", 
+                                data.name, 
+                                if maybe_config.is_none() { "configured" } else { "enabled" }
+                            ))
+                            .build();
+
+                        return Ok(ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
+                            .embeds(vec![embed])
+                            .ephemeral()
+                            .build());
+                    },
+                    Some(_) => {}
+                }
+            }
+
             command.respond(self, data, ctx).await
         } else {
             Err(Error::InvalidPayload(format!(

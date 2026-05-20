@@ -13,9 +13,22 @@ use twilight_model::{
 use worker::RouteContext;
 
 use crate::{
-    commands::ext::REQUIRED_EXTENSIONS, constants::COMMANDS, error::Error, framework::{discord::{
-        autocomplete::Autocomplete, command::{Command, CommandDataExt}, option::{CommandOptionExt, OptionBuilder}, response::InteractionResponseExt
-    }, structs::config::extension::ExtensionConfig, traits::namespaces::KvExt}, ui::embeds::{default::DEFAULT_EMBED, error::ERROR_EMBED}
+    commands::ext::REQUIRED_EXTENSIONS, 
+    constants::COMMANDS, 
+    error::Error, framework::{
+        discord::{
+            autocomplete::Autocomplete, 
+            command::{Command, CommandDataExt}, 
+            option::OptionBuilder, 
+            response::InteractionResponseExt
+        }, 
+        structs::config::extension::ExtensionConfig, 
+        traits::namespaces::KvExt
+    }, 
+    ui::embeds::{
+        default::DEFAULT_EMBED, 
+        error::ERROR_EMBED
+    }
 };
 
 #[derive(Default)]
@@ -63,7 +76,7 @@ impl Command for Setup {
             .filter(|(name, command)| {
                 command.get_controller().is_some() &&
                 !REQUIRED_EXTENSIONS.contains(&name.as_str()) && 
-                if !name.is_empty() { name.to_lowercase().contains(&user_input) } else { true }
+                if !user_input.is_empty() { name.to_lowercase().contains(&user_input) } else { true }
             })
             .map(|(name, _)| format!("extensions:{name}"))
             .collect();

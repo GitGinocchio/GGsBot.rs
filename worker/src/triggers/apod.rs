@@ -40,7 +40,7 @@ impl Trigger for ApodTrigger {
         _ctx: &ScheduleContext,
     ) -> Result<(), Error> {
         let kv = env.kv(KV_BINDING)?;
-        let queue = env.queue("APOD_QUEUE")?;
+        let queue = env.queue("TASKS_QUEUE")?;
         let mut cursor: Option<String> = None;
 
         loop {

@@ -37,17 +37,17 @@ crons = [
 # Modificare questa coda in modo che diventi una coda generica "tasks"
 # nel quale il bot inserisce delle azioni che dovra' fare in futuro
 [[queues.producers]]
-binding = "APOD_QUEUE"
-queue = "ggsbotrs-apod-queue"
+binding = "TASKS_QUEUE"
+queue = "ggsbotrs-tasks-queue"
 #delivery_delay = 60
 
 [[queues.consumers]]
-queue = "ggsbotrs-apod-queue"
+queue = "ggsbotrs-tasks-queue"
 max_batch_size = 10
-max_batch_timeout = 0
-max_retries = 3
-max_concurrency = 2
-retry_delay = 120
+max_batch_timeout = 10
+max_retries = 5
+max_concurrency = 10
+retry_delay = 60
 #dead_letter_queue = "my-queue-dlq"
 
 [[queues.consumers]]

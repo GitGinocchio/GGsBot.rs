@@ -33,6 +33,10 @@ impl QueueProcessor {
         Self { env, ctx }
     }
 
+    // TODO: Modificare il dispatcher delle queue in modo che QueueMessage contenga un campo message_type di tipo String
+    // Aggiungere inoltre oltre al metodo name() della queue nel trait Queue anche un metodo message_type
+    // In modo che si possa creare un handler per ogni singolo tipo di dato...
+
     pub async fn process(&self, batch: MessageBatch<crate::QueueMessage>) -> Result<()> {
         let queue_name = batch.queue();
         worker::console_log!("[QueueJob]: Batch started for queue '{}'", queue_name);
