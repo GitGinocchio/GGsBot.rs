@@ -10,8 +10,10 @@ use crate::constants::COMMANDS;
 #[derive(Deserialize, Clone, Debug)]
 pub struct DispatcherEnvelope {
     event: Value,
-    metadata: Value,
-    kind: EventType
+    kind: EventType,
+
+    #[serde(default)]
+    metadata: Value
 }
 
 pub struct Gateway {
