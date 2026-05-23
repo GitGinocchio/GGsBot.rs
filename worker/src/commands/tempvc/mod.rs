@@ -5,7 +5,7 @@ use twilight_model::{application::interaction::Interaction, gateway::{event::Eve
 use worker::RouteContext;
 
 use crate::{
-    build_commands, commands::tempvc, error::Error, framework::{discord::command::{Command, CommandMap}, structs::{config::extension::ExtensionConfig, kv::NamespacedKv}, traits::{command::{CommandController, CommandEvents}, namespaces::{KV_BINDING, KvExt}}}, services::discord::DiscordService
+    bindings::{KV_BINDING, QueueBinding}, build_commands, commands::tempvc, error::Error, framework::{discord::command::{Command, CommandMap}, structs::{config::extension::ExtensionConfig, kv::NamespacedKv, queue::QueueMessage}, traits::{command::{CommandController, CommandEvents}, namespaces::KvExt}}, queues::tempvc::TempvcDeleteChannelMessage, services::discord::DiscordService
 };
 
 mod new;
@@ -67,6 +67,12 @@ impl CommandEvents for Tempvc {
                 .get("before_channel_id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown");
+
+            let task_queue = ctx.env.queue(&QueueBinding::Tasks.to_string())?;
+
+            task_queue.send(QueueMessage::Tempvc(TempvcDeleteChannelMessage {
+                channel_id: before_channel_id.into()
+            })).await?;
 
             worker::console_log!("[tempvc-events] User left channel. Previous: {}", before_channel_id);
 

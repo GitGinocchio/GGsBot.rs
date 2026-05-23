@@ -178,6 +178,25 @@ impl DiscordService {
         Ok(response)
     }
 
+    pub async fn delete_channel(&self, 
+        channel_id: Id<ChannelMarker>
+    ) -> Result<(), Error> {
+        let url = format!("{}/channels/{}", DISCORD_API_ENDPOINT, channel_id);
+
+        let response = CLIENT
+            .delete(&url)
+            .header(AUTHORIZATION, format!("Bot {}", self.token))
+            .send()
+            .await?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Generic(format!("Errore eliminazione canale: {}", error_text)))
+        }
+    }
+
     pub async fn move_member(
         &self,
         guild_id: Id<GuildMarker>,

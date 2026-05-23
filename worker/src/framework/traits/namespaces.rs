@@ -1,9 +1,7 @@
 use twilight_model::application::interaction::Interaction;
 use worker::Env;
 
-use crate::{error::Error, framework::structs::kv::NamespacedKv};
-
-pub static KV_BINDING: &'static str = "ggsbotkv";
+use crate::{bindings::KV_BINDING, error::Error, framework::structs::kv::NamespacedKv};
 
 pub trait KvExt {
     #[allow(unused)]

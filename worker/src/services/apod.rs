@@ -7,9 +7,7 @@ use url::Url;
 use worker::Env;
 
 use crate::{
-    constants::CLIENT,
-    error::Error,
-    framework::{discord::embed::EmbedExt, traits::namespaces::KV_BINDING},
+    bindings::KV_BINDING, constants::CLIENT, error::Error, framework::discord::embed::EmbedExt
 };
 
 const API_URL: &'static str = "https://api.nasa.gov/planetary/apod";

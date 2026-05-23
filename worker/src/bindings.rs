@@ -2,18 +2,18 @@ use serde::{Deserialize, Serialize};
 use strum_macros::Display;
 
 #[allow(unused)]
-pub static KV_NAMESPACE_BINDING: &'static str = "ggsbotkv";
+pub static KV_BINDING: &'static str = "ggsbotkv";
 
 #[derive(Debug, Serialize, Deserialize, Display, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 #[allow(unused)]
 pub enum QueueBinding {
-    #[serde(rename = "ggsbotrs-gateway-queue")]
-    #[strum(serialize = "ggsbotrs-gateway-queue")]
+    #[serde(rename = "GATEWAY_QUEUE")]
+    #[strum(serialize = "GATEWAY_QUEUE")]
     Gateway,
 
-    #[serde(rename = "ggsbotrs-tasks-queue")]
-    #[strum(serialize = "ggsbotrs-tasks-queue")]
+    #[serde(rename = "TASKS_QUEUE")]
+    #[strum(serialize = "TASKS_QUEUE")]
     Tasks,
 }
 

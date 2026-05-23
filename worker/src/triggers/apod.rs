@@ -2,12 +2,9 @@ use async_trait::async_trait;
 use worker::{Env, ScheduleContext, ScheduledEvent};
 
 use crate::{
-    QueueMessage, commands::nasa::NasaExtConfig, error::Error, framework::{
+    QueueMessage, bindings::{KV_BINDING, QueueBinding}, commands::nasa::NasaExtConfig, error::Error, framework::{
         structs::config::extension::ExtensionConfig, 
-        traits::{
-            namespaces::KV_BINDING,
-            trigger::{CronSchedule, Trigger},
-        }
+        traits::trigger::{CronSchedule, Trigger}
     }, queues::apod::ApodQueueMessage
 };
 
@@ -40,7 +37,7 @@ impl Trigger for ApodTrigger {
         _ctx: &ScheduleContext,
     ) -> Result<(), Error> {
         let kv = env.kv(KV_BINDING)?;
-        let queue = env.queue("TASKS_QUEUE")?;
+        let queue = env.queue(&QueueBinding::Tasks.to_string())?;
         let mut cursor: Option<String> = None;
 
         loop {

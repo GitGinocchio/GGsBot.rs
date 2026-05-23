@@ -3,7 +3,7 @@ use worker::*;
 
 use crate::{
     error::Error,
-    framework::traits::queue::MessageHandler, queues::apod::{ApodMessageHandler, ApodQueueMessage}
+    framework::traits::queue::MessageHandler, queues::{apod::{ApodMessageHandler, ApodQueueMessage}, tempvc::{TempvcDeleteChannelHandler, TempvcDeleteChannelMessage}}
 };
 
 macro_rules! define_queue_message {
@@ -55,6 +55,7 @@ macro_rules! define_queue_message {
 
 define_queue_message!(QueueMessage {
     Apod(ApodQueueMessage),
+    Tempvc(TempvcDeleteChannelMessage)
 });
 
 impl QueueMessage {
@@ -64,9 +65,8 @@ impl QueueMessage {
         env: &Env
     ) -> Result<(), Error> {
         match self {
-            QueueMessage::Apod(_) => {
-                self.run_batch::<ApodMessageHandler>(batch, env).await
-            },
+            QueueMessage::Apod(_) => self.run_batch::<ApodMessageHandler>(batch, env).await,
+            QueueMessage::Tempvc(_) => self.run_batch::<TempvcDeleteChannelHandler>(batch, env).await
         }
     }
 
