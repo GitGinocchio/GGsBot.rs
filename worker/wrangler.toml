@@ -44,7 +44,7 @@ queue = "ggsbotrs-tasks-queue"
 [[queues.consumers]]
 queue = "ggsbotrs-tasks-queue"
 max_batch_size = 10
-max_batch_timeout = 3
+max_batch_timeout = 0
 max_retries = 3
 max_concurrency = 10
 retry_delay = 60

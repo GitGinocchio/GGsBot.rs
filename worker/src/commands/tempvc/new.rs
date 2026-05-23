@@ -64,18 +64,18 @@ impl Command for New {
             .await?
             .unwrap_or_default();
 
-        let channels = &mut extension
+        let generators = &mut extension
             .config
             .get_or_insert_default()
-            .channels;
+            .generators;
 
         let channel_string = channel.to_string();
 
-        if channels.contains(&channel_string) {
+        if generators.contains(&channel_string) {
             return Err(Error::InteractionFailed(format!("This channel is already set as channel generator!")));
         }
 
-        channels.push(channel_string);
+        generators.push(channel_string);
 
         guild_kv
             .put(&key, serde_json::to_string(&extension)?, None)

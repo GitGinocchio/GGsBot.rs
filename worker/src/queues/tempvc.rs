@@ -4,8 +4,7 @@ use twilight_model::{id::{Id, marker::ChannelMarker}};
 use worker::{Env};
 
 use crate::{
-    error::Error,
-    framework::traits::queue::MessageHandler, services::discord::DiscordService, 
+    error::Error, framework::traits::queue::MessageHandler, services::discord::DiscordService 
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

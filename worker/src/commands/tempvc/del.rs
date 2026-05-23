@@ -56,20 +56,20 @@ impl Command for Del {
             .await?
             .unwrap_or_default();
 
-        let channels = &mut extension
+        let generators = &mut extension
             .config
             .get_or_insert_default()
-            .channels;
+            .generators;
 
         let string_channel = channel.to_string();
         let embed: Embed;
 
-        if !channels.contains(&string_channel) {
+        if !generators.contains(&string_channel) {
             embed = ERROR_EMBED.clone()
                 .description("This channel is not set as generator channel!")
                 .build();
         } else {
-            channels.retain(|c| c != &string_channel);
+            generators.retain(|c| c != &string_channel);
 
             guild_kv.put(&key, serde_json::to_string(&extension)?, None).await?;
             

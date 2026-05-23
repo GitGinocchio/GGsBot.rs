@@ -16,6 +16,7 @@ pub(crate) struct Tempvc {}
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct TempvcExtConfig {
+    generators: Vec<String>,
     channels: Vec<String>
 }
 
@@ -62,11 +63,36 @@ impl CommandEvents for Tempvc {
             return Err(Error::Generic("Missing guild_id".into())) 
         };
 
+        let kv = ctx.kv(KV_BINDING)?;
+        let guild_key = format!("guilds:{}", guild_id);
+        let guild_kv = NamespacedKv::new(kv, guild_key.clone());
+
+        let config_key = format!("extensions:{}:config", self.name());
+
+        let maybe_ext = guild_kv
+            .get_json::<ExtensionConfig<TempvcExtConfig>>(&config_key).await?;
+
+        let Some(mut extension) = maybe_ext else {
+            return Ok(Value::String(format!("No tempvc config for this server!")))
+        };
+
         let Some(channel_id) = state.channel_id else {
             let before_channel_id = metadata
                 .get("before_channel_id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown");
+
+            let channels = &mut extension.config
+                .get_or_insert_default()
+                .channels;
+
+            if !channels.contains(&before_channel_id.to_string()) {
+                return Ok(Value::String(format!("before channel is not a custom voice channel!")));
+            }
+
+            channels.retain(|channel| channel != before_channel_id);
+
+            guild_kv.put(&config_key, serde_json::to_string(&extension)?, None).await?;
 
             let task_queue = ctx.env.queue(&QueueBinding::Tasks.to_string())?;
 
@@ -83,24 +109,15 @@ impl CommandEvents for Tempvc {
         let Some(member) = &state.member else {
             return Err(Error::Generic("Missing member".into())) 
         };
-        
-        let kv = ctx.kv(KV_BINDING)?;
-        let guild_key = format!("guilds:{}", guild_id);
-        let guild_kv = NamespacedKv::new(kv, guild_key.clone());
 
-        let maybe_ext = guild_kv
-            .get_json::<ExtensionConfig<TempvcExtConfig>>(&format!("extensions:{}:config", self.name())).await?;
+        {
+            let generators = &extension.config
+                .get_or_insert_default()
+                .generators;
 
-        let Some(mut extension) = maybe_ext else {
-            return Ok(Value::String(format!("No tempvc config for this server!")))
-        };
-
-        let channels = &mut extension.config
-            .get_or_insert_default()
-            .channels;
-
-        if !channels.contains(&channel_id.get().to_string()) {
-            return Ok(Value::String(format!("channel not present in config: {channel_id} not in {channels:?}")));
+            if !generators.contains(&channel_id.get().to_string()) {
+                return Ok(Value::String(format!("channel not present in config: {channel_id} not in {generators:?}")));
+            }
         }
 
         let discord = DiscordService::new(&ctx.env)?;
@@ -118,6 +135,14 @@ impl CommandEvents for Tempvc {
             current_channel.parent_id.map(|id| id.cast()),
             None
         ).await?;
+
+        let channels = &mut extension.config
+            .get_or_insert_default()
+            .channels;
+
+        channels.push(new_channel.id.to_string());
+
+        guild_kv.put(&config_key, serde_json::to_string(&extension)?, None).await?;
 
         let allow = Permissions::empty()
             .union(Permissions::CONNECT)
