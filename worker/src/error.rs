@@ -10,7 +10,7 @@ use crate::{
 
 #[allow(unused)]
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum Error {
+pub enum Error {
     #[error("Environment variable '{0}' not found.")]
     EnvironmentVariableNotFound(String),
 

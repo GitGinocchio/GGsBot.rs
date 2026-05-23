@@ -1,28 +1,108 @@
+use serde::{Deserialize, Serialize};
 use worker::*;
 
-use crate::constants::QUEUES;
+use crate::{
+    error::Error,
+    framework::traits::queue::MessageHandler, queues::apod::{ApodMessageHandler, ApodQueueMessage}
+};
 
-/**
-Usage:
-build_queue_enum!(
-    Hello => queues::hello::Hello,
-    Nasa  => queues::nasa::Nasa,
-    Bot   => queues::bot::Bot
-);
-*/
-#[macro_export]
-macro_rules! build_queue_enum {
-    ($($variant:ident => $handler:ty),*) => {
-        #[derive(serde::Serialize, serde::Deserialize, Debug)]
+macro_rules! define_queue_message {
+    ($name:ident { $($variant:ident($payload:ty)),* $(,)? }) => {
+        #[derive(Debug, Serialize, Deserialize, Clone)]
         #[serde(tag = "type", content = "data")]
-        pub enum QueueMessage {
-            $(
-                $variant($handler),
-            )*
+        #[serde(rename_all = "kebab-case")]
+        pub enum $name {
+            $($variant($payload)),*
         }
+
+        $(
+            // Conversione per il valore: impl TryFrom<QueueMessage> for ApodQueueMessage
+            impl TryFrom<$name> for $payload {
+                type Error = Error;
+
+                fn try_from(value: $name) -> Result<Self, Self::Error> {
+                    match value {
+                        $name::$variant(data) => Ok(data),
+                        #[allow(unreachable_patterns)]
+                        _ => Err(Error::Generic(format!(
+                            "Expected variant {} from {}, but found another", 
+                            stringify!($variant), 
+                            stringify!($name)
+                        ))),
+                    }
+                }
+            }
+
+            // Conversione per il riferimento: impl TryFrom<&QueueMessage> for &ApodQueueMessage
+            impl<'a> TryFrom<&'a $name> for &'a $payload {
+                type Error = Error;
+
+                fn try_from(value: &'a $name) -> Result<Self, Self::Error> {
+                    match value {
+                        $name::$variant(data) => Ok(data),
+                        #[allow(unreachable_patterns)]
+                        _ => Err(Error::Generic(format!(
+                            "Expected variant {} from {}, but found another", 
+                            stringify!($variant), 
+                            stringify!($name)
+                        ))),
+                    }
+                }
+            }
+        )*
     };
 }
 
+define_queue_message!(QueueMessage {
+    Apod(ApodQueueMessage),
+});
+
+impl QueueMessage {
+    pub async fn dispatch_batch(
+        &self, 
+        batch: &[Message<QueueMessage>], 
+        env: &Env
+    ) -> Result<(), Error> {
+        match self {
+            QueueMessage::Apod(_) => {
+                self.run_batch::<ApodMessageHandler>(batch, env).await
+            },
+        }
+    }
+
+    /// Motore interno che orchestra il batch per un tipo specifico di Handler
+    async fn run_batch<H>(&self, batch: &[Message<QueueMessage>], env: &Env) -> Result<(), Error> 
+    where 
+        H: MessageHandler,
+        for<'a> &'a H::Payload: TryFrom<&'a QueueMessage, Error = Error>
+    {
+        // Setup dell'handler specifico (es. ApodHandler)
+        let handler = H::setup(env).await?;
+        
+        let tasks = batch.iter().map(|msg| async {
+            let Ok(payload) = msg.body().try_into() else {
+                msg.ack();
+                return Err(Error::InvalidPayload(format!("Invalid payload for queue message!")))
+            };
+        
+            match handler.handle(payload).await {
+                Ok(_) => {
+                    msg.ack();
+                    Ok(())
+                },
+                Err(e) => {
+                    msg.retry();
+                    Err(e)
+                }
+            }
+        });
+
+        futures::future::join_all(tasks).await;
+        Ok(())
+    }
+}
+
+#[allow(unused)]
 pub struct QueueProcessor {
     env: Env,
     ctx: Context,
@@ -33,44 +113,13 @@ impl QueueProcessor {
         Self { env, ctx }
     }
 
-    // TODO: Modificare il dispatcher delle queue in modo che QueueMessage contenga un campo message_type di tipo String
-    // Aggiungere inoltre oltre al metodo name() della queue nel trait Queue anche un metodo message_type
-    // In modo che si possa creare un handler per ogni singolo tipo di dato...
-
-    pub async fn process(&self, batch: MessageBatch<crate::QueueMessage>) -> Result<()> {
-        let queue_name = batch.queue();
-        worker::console_log!("[QueueJob]: Batch started for queue '{}'", queue_name);
-
-        if let Some(handler) = QUEUES.get(&queue_name) {
-            worker::console_log!(
-                "[QueueJob]: Executing handler for queue '{}'...",
-                queue_name
-            );
-
-            if let Err(e) = handler.handle(batch, &self.env, &self.ctx).await {
-                worker::console_error!(
-                    "[QueueJob]: Handler for queue '{}' FAILED with error: {:?}",
-                    queue_name,
-                    e
-                );
-                return Err(e.into());
-            }
-
-            worker::console_log!(
-                "[QueueJob]: Handler for queue '{}' finished successfully.",
-                queue_name
-            );
-        } else {
-            worker::console_warn!(
-                "[QueueJob]: No handler registered for queue: '{}'",
-                queue_name
-            );
+    pub async fn process(&self, batch: MessageBatch<QueueMessage>) -> Result<()> {
+        let messages = batch.messages()?;
+        
+        if let Some(first_msg) = messages.first() {
+            first_msg.body().dispatch_batch(&messages, &self.env).await?;
         }
 
-        worker::console_log!(
-            "[QueueJob]: Batch completed successfully for queue '{}'",
-            queue_name
-        );
         Ok(())
     }
 }

@@ -1,68 +1,62 @@
+use std::str::FromStr;
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use worker::{Context, Env, MessageBatch, MessageExt};
+use twilight_model::{id::Id};
+use worker::{Env};
 
-use crate::{QueueMessage, error::Error, framework::traits::queue::Queue, services::{apod::ApodService, discord::{DiscordMessagePayload, DiscordService}}};
+use crate::{
+    error::Error,
+    framework::traits::queue::MessageHandler, 
+    services::{
+        apod::ApodService, 
+        discord::{
+            DiscordMessagePayload, 
+            DiscordService
+        }
+    }
+};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ApodQueueMessage {
     pub channel_id: String,
     pub guild_id: String
 }
 
-#[derive(Default)]
-pub struct ApodQueue;
+pub struct ApodMessageHandler {
+    pub discord: DiscordService,
+    pub apod_embed: serde_json::Value,
+}
 
 #[async_trait(?Send)]
-impl Queue for ApodQueue {
-    fn name(&self) -> &str {
-        "ggsbotrs-tasks-queue"
-    }
+impl MessageHandler for ApodMessageHandler {
+    type Payload = ApodQueueMessage;
 
-    async fn handle(
-        &self,
-        batch: MessageBatch<QueueMessage>,
-        env: &Env,
-        _ctx: &Context,
-    ) -> Result<(), Error> {
+    async fn setup(env: &Env) -> Result<Self, Error> {
         let discord_service = DiscordService::new(env)?;
-        
         let apod_service = ApodService::new(env)?;
+        
         let apod_data = apod_service.fetch_apod_with_retries(5).await?;
         apod_service.put_apod(&apod_data).await?;
-        
+
         let apod_embed = ApodService::build_embed(apod_data);
         let apod_embed_value = serde_json::to_value(&apod_embed)?;
 
-        for message in batch.messages()? {
-            let data = match message.body() {
-                QueueMessage::Apod(b) => b,
-                #[allow(unused)]
-                _ => continue
-            };
+        Ok(Self { 
+            discord: discord_service,
+            apod_embed: apod_embed_value
+        })
+    }
 
-            worker::console_debug!("message data: {:?}", data);
+    async fn handle(&self, payload: &Self::Payload) -> Result<(), Error> {
+        let base_payload = DiscordMessagePayload {
+            embeds: Some(vec![self.apod_embed.clone()]),
+            ..Default::default()
+        };
 
-            let payload = DiscordMessagePayload {
-                embeds: Some(vec![apod_embed_value.clone()]),
-                ..Default::default()
-            };
+        let channel_id = Id::from_str(&payload.channel_id)
+            .map_err(|e| Error::ParseIntError(e))?;
 
-            match discord_service.send_guild_message(&data.channel_id, &payload).await {
-                Ok(_) => {
-                    message.ack();
-                },
-                Err(e) => {
-                    message.retry();
-                    worker::console_error!(
-                        "Fallito invio per guild {}: {:?}", 
-                        data.guild_id, 
-                        e
-                    );
-                }
-            }
-        }
-
-        Ok(())
+        self.discord.send_guild_message(channel_id, &base_payload).await
     }
 }

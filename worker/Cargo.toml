@@ -31,6 +31,7 @@ url = "2.5.8"
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.1", optional = true }
 futures = "0.3.32"
+strum_macros = "0.28.0"
 
 [profile.release]
 opt-level = "z"     # Ottimizza specificamente per la dimensione del file

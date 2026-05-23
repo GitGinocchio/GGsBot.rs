@@ -10,6 +10,7 @@ use crate::constants::COMMANDS;
 #[derive(Deserialize, Clone, Debug)]
 pub struct DispatcherEnvelope {
     event: Value,
+    metadata: Value,
     kind: EventType
 }
 
@@ -34,25 +35,46 @@ impl Gateway {
             .deserialize(data.event)
             .map_err(|e| worker::Error::from(format!("Errore deserializzazione: {}", e)))?;
 
-        let mut responses: HashMap<String, Value> = HashMap::new();
-
-        for (name, command) in COMMANDS.iter() {
-            let handlers = match command.get_events() {
-                Some(events) => events,
-                None => continue
-            };
-
+        let tasks = COMMANDS.iter().filter_map(|(name, command)| {
+            let handlers = command.get_events()?;
+            
             if !handlers.responds_to(data.kind) {
-                continue;
+                return None;
             }
 
-            let response = handlers.dispatch(&self.ctx, event.clone()).await?;
-            responses.insert(name.clone(), response);
+            let name = name.clone();
+            let event = event.clone();
+            let metadata = data.metadata.clone();
+            let ctx = &self.ctx;
+
+            Some(async move {
+                let result = handlers.dispatch(ctx, event, metadata).await;
+                (name, result)
+            })
+        });
+
+        let results = futures::future::join_all(tasks).await;
+
+        let mut responses: HashMap<String, Value> = HashMap::new();
+        for (name, res) in results {
+            match res {
+                Ok(val) => {
+                    responses.insert(name, val);
+                }
+                Err(e) => {
+                    worker::console_error!("Errore nel comando {}: {:?}", name, e);
+                    responses.insert(name, json!({ "error": e.to_string() }));
+                }
+            }
         }
 
-        Response::from_json(&json!({
+        let payload = json!({
             "status" : "success",
             "responses" : responses
-        }))
+        });
+
+        worker::console_debug!("[gateway: {event_name}] response: {payload}");
+
+        Response::from_json(&payload)
     }
 }

@@ -1,9 +1,8 @@
 use worker::*;
 
 use crate::{
-    constants::QueueMessage,
     framework::structs::{
-        queue::QueueProcessor, 
+        queue::{QueueMessage, QueueProcessor}, 
         scheduler::Scheduler
     }, 
     routes::api
@@ -16,6 +15,7 @@ mod framework;
 mod queues;
 mod services;
 mod triggers;
+mod bindings;
 mod routes;
 mod ui;
 mod utils;

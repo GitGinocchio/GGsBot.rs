@@ -1,14 +1,25 @@
 use async_trait::async_trait;
 use twilight_model::{
-    application::{command::{CommandOption, CommandOptionType}, interaction::{
+    application::{command::{CommandOption}, interaction::{
         Interaction, 
-        application_command::CommandData
-    }}, 
-    http::interaction::InteractionResponse
+        application_command::{CommandData, CommandOptionValue}
+    }}, channel::ChannelType, http::interaction::{InteractionResponse, InteractionResponseType}
 };
 use worker::RouteContext;
 
-use crate::{error::Error, framework::discord::{command::Command, option::OptionBuilder, response::InteractionResponseExt}};
+use crate::{
+    commands::tempvc::TempvcExtConfig, 
+    error::Error, 
+    framework::{discord::{
+            command::{
+                Command, 
+                CommandDataExt
+            }, interaction::InteractionExt, option::{OptionBuilder}, response::ResponseBuilder
+        }, structs::config::extension::ExtensionConfig, traits::namespaces::KvExt}, 
+    ui::embeds::{
+        default::DEFAULT_EMBED
+    }
+};
 
 #[derive(Default)]
 pub struct New;
@@ -24,24 +35,61 @@ impl Command for New {
     }
 
     fn options(&self) -> Vec<CommandOption> {
-        // TODO: Inserire i channel_types dopo aver aggiunto un metodo nel builder
-        // per renderlo possibile
         vec![
-            OptionBuilder::new(
-                CommandOptionType::Channel, 
-                "channel", 
-                "Canale usato per generare i canali vocali temporanei"
-            )
-            .build()
+            OptionBuilder::channel("channel", "Canale usato per generare i canali vocali temporanei")
+                .channel_types(vec![ChannelType::GuildVoice, ChannelType::GuildStageVoice])
+                .required(true)
+                .build()
         ]
     }
 
     async fn respond(
         &self,
-        _interaction: &Interaction,
-        _data: &CommandData,
-        _ctx: &mut RouteContext<()>,
+        interaction: &Interaction,
+        data: &CommandData,
+        ctx: &mut RouteContext<()>,
     ) -> Result<InteractionResponse, Error> {
-        Ok(InteractionResponse::empty())
+        interaction.defer(true).await?;
+
+        let channel = match data.get_option("channel") {
+            Some(CommandOptionValue::Channel(channel)) => channel.get(),
+            Some(_) | None => return Err(Error::InteractionFailed("Missing required option 'channel'".into()))
+        };
+
+        let guild_kv = interaction.guild_kv(&ctx.env)?;
+        let key = format!("extensions:tempvc:config");
+
+        let mut extension = guild_kv
+            .get_json::<ExtensionConfig<TempvcExtConfig>>(&key)
+            .await?
+            .unwrap_or_default();
+
+        let channels = &mut extension
+            .config
+            .get_or_insert_default()
+            .channels;
+
+        let channel_string = channel.to_string();
+
+        if channels.contains(&channel_string) {
+            return Err(Error::InteractionFailed(format!("This channel is already set as channel generator!")));
+        }
+
+        channels.push(channel_string);
+
+        guild_kv
+            .put(&key, serde_json::to_string(&extension)?, None)
+            .await?;
+
+        let embed = DEFAULT_EMBED.clone()
+            .description("Channel set as a voice channel generator!")
+            .build();
+
+        let response = ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
+            .embeds(vec![embed])
+            .ephemeral()
+            .build();
+
+        Ok(interaction.edit(&response).await?)
     }
 }

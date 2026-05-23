@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 use tokio::sync::Mutex;
 use twilight_model::gateway::event::DispatchEvent;
 
-use crate::constants::{CLIENT, DISPATCH_STRATEGIES, HTTP_ENDPOINT, QUEUE_ENDPOINT};
+use crate::constants::{CLIENT, DISPATCH_STRATEGIES, HTTP_ENDPOINT, MIDDLEWARES, QUEUE_ENDPOINT};
 
 pub enum DispatchStrategy {
     Smart { queue_delay: u64 }, // based on rate-limiter/429
@@ -43,9 +43,19 @@ impl Dispatcher {
 
         println!("📥 [EVENT] {:?}", kind);
 
+        let event_value = serde_json::to_value(event)?;
+
+        let metadata = if let Some(middleware) = MIDDLEWARES.get(&kind) {
+            println!("  ⚙️  [MIDDLEWARE] Running: {}", middleware.name());
+            Some(middleware.execute(event, strategy)?)
+        } else {
+            None
+        };
+
         let payload = json!({
             "kind" : kind,
-            "event": serde_json::to_value(event)?
+            "event": event_value,
+            "metadata": metadata
         });
 
         match strategy {

@@ -68,11 +68,10 @@ impl Command for Clear {
             .channel
             .as_ref()
             .map(|c| c.id)
-            .ok_or_else(|| Error::InteractionFailed("Impossibile determinare il canale.".into()))?
-            .get();
+            .ok_or_else(|| Error::InteractionFailed("Impossibile determinare il canale.".into()))?;
 
         let discord = DiscordService::new(&ctx.env)?;
-        let num_deleted = discord.delete_messages(&channel_id.to_string(), amount as u8).await?;
+        let num_deleted = discord.delete_messages(channel_id, amount as u8).await?;
 
         let response = ResponseBuilder::new(InteractionResponseType::ChannelMessageWithSource)
             .content(format!("🗑️ Eliminati **{}** messaggi.", num_deleted))

@@ -1,12 +1,15 @@
-use twilight_model::application::command::{
+use twilight_model::{application::command::{
     CommandOption, CommandOptionChoice, CommandOptionChoiceValue, CommandOptionType,
-};
+}, channel::ChannelType};
 
 #[allow(unused)]
 pub trait CommandOptionExt {
     fn new(kind: CommandOptionType, name: impl Into<String>, desc: impl Into<String>) -> Self;
     fn set_required(&mut self, required: bool) -> &mut Self;
     fn set_autocomplete(&mut self, autocomplete: bool) -> &mut Self;
+
+    fn set_channel_types(&mut self, channel_types: Vec<ChannelType>) -> &mut Self;
+
     fn add_choice(
         &mut self,
         name: impl Into<String>,
@@ -41,6 +44,11 @@ impl CommandOptionExt for CommandOption {
 
     fn set_autocomplete(&mut self, autocomplete: bool) -> &mut Self {
         self.autocomplete = Some(autocomplete);
+        self
+    }
+
+    fn set_channel_types(&mut self, channel_types: Vec<ChannelType>) -> &mut Self {
+        self.channel_types = Some(channel_types);
         self
     }
 
@@ -92,6 +100,14 @@ impl OptionBuilder {
         Self::new(CommandOptionType::Integer, name, desc)
     }
 
+    pub fn channel(name: impl Into<String>, desc: impl Into<String>) -> Self {
+        Self::new(CommandOptionType::Channel, name, desc)
+    }
+
+    pub fn mentionable(name: impl Into<String>, desc: impl Into<String>) -> Self {
+        Self::new(CommandOptionType::Mentionable, name, desc)
+    }
+
     pub fn required(mut self, required: bool) -> Self {
         self.0.set_required(required);
         self
@@ -99,6 +115,11 @@ impl OptionBuilder {
 
     pub fn autocomplete(mut self, autocomplete: bool) -> Self {
         self.0.set_autocomplete(autocomplete);
+        self
+    }
+
+    pub fn channel_types(mut self, channel_types: Vec<ChannelType>) -> Self {
+        self.0.set_channel_types(channel_types);
         self
     }
 

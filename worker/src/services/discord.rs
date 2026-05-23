@@ -1,7 +1,20 @@
 use chrono::{DateTime, TimeDelta, Utc};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use serde::Serialize;
 use serde_json::{Value, json};
-use twilight_model::channel::Message;
+use twilight_model::{
+    channel::{
+        Channel, 
+        ChannelType, 
+        Message,
+    }, 
+    guild::Permissions, 
+    http::permission_overwrite::{
+        PermissionOverwrite,
+        PermissionOverwriteType
+    }, 
+    id::{Id, marker::{ChannelMarker, GenericMarker, GuildMarker, UserMarker}}
+};
 use worker::Env;
 
 use crate::{constants::CLIENT, error::Error};
@@ -29,6 +42,8 @@ pub struct DiscordService {
     token: String
 }
 
+
+// TODO: Spostare questo in framework
 #[allow(unused)]
 impl DiscordService {
     pub fn new(env: &Env) -> Result<Self, Error> {
@@ -45,7 +60,7 @@ impl DiscordService {
         unimplemented!()
     }
 
-    pub async fn send_guild_message(&self, channel_id: &str, payload: &DiscordMessagePayload) -> Result<(), Error> {
+    pub async fn send_guild_message(&self, channel_id: Id<ChannelMarker>, payload: &DiscordMessagePayload) -> Result<(), Error> {
         let url = format!("{}/channels/{}/messages",DISCORD_API_ENDPOINT, channel_id);
 
         let response = CLIENT
@@ -65,7 +80,7 @@ impl DiscordService {
         }
     }
 
-    pub async fn fetch_messages(&self, channel_id: &str, amount: u8) -> Result<Vec<Message>, Error> {
+    pub async fn fetch_messages(&self, channel_id: Id<ChannelMarker>, amount: u8) -> Result<Vec<Message>, Error> {
         let messages: Vec<Message> = CLIENT
             .get(format!("{}/channels/{}/messages?limit={}",DISCORD_API_ENDPOINT, channel_id, amount))
             .header("Authorization", format!("Bot {}", self.token))
@@ -77,7 +92,7 @@ impl DiscordService {
         Ok(messages)
     }
 
-    pub async fn delete_messages(&self, channel_id: &str, amount: u8) -> Result<usize, Error> {
+    pub async fn delete_messages(&self, channel_id: Id<ChannelMarker>, amount: u8) -> Result<usize, Error> {
         if amount < 1 || amount > 100 {
             return Err(Error::InteractionFailed("Il delete richiede tra 1 e i 100 messaggi.".into()));
         }
@@ -132,5 +147,114 @@ impl DiscordService {
         }
 
         Ok(message_ids.len())
+    }
+
+    pub async fn create_channel(&self, 
+        guild_id: Id<GuildMarker>, 
+        name: String, 
+        kind: ChannelType, 
+        parent_id: Option<Id<GenericMarker>>, 
+        position: Option<u16>
+    ) -> Result<Channel, Error> {
+        let url = format!("{}/guilds/{}/channels", DISCORD_API_ENDPOINT, guild_id);
+
+        let payload = json!({
+            "name": name,
+            "type": kind,
+            "parent_id": parent_id.map(|id| id.get().to_string()),
+            "position": position
+        });
+
+        let response: Channel = CLIENT
+            .post(&url)
+            .header(AUTHORIZATION, format!("Bot {}", self.token))
+            .header(CONTENT_TYPE, "application/json")
+            .json(&payload)
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        Ok(response)
+    }
+
+    pub async fn move_member(
+        &self,
+        guild_id: Id<GuildMarker>,
+        user_id: Id<UserMarker>,
+        channel_id: Id<ChannelMarker>
+    ) -> Result<(), Error> {
+        let url = format!(
+            "{}/guilds/{}/members/{}", 
+            DISCORD_API_ENDPOINT, 
+            guild_id, 
+            user_id
+        );
+
+        let payload = json!({
+            "channel_id": Some(channel_id.get().to_string()),
+        });
+
+        let response = CLIENT
+            .patch(&url)
+            .header(AUTHORIZATION, format!("Bot {}", self.token))
+            .header(CONTENT_TYPE, "application/json")
+            .json(&payload)
+            .send()
+            .await?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let error_text = response.text().await.unwrap_or_default();
+            worker::console_error!("Errore spostamento membro: {}", error_text);
+            Err(Error::UpstreamError(format!("Discord API Error: {}", error_text)))
+        }
+    }
+
+    pub async fn get_channel(&self, channel_id: Id<ChannelMarker>) -> Result<Channel, Error> {
+        let url = format!("{}/channels/{}",DISCORD_API_ENDPOINT, channel_id);
+
+        let channel: Channel = CLIENT
+            .get(&url)
+            .header(AUTHORIZATION, format!("Bot {}", self.token))
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        Ok(channel)
+    }
+
+    pub async fn set_permissions(
+        &self, 
+        channel_id: Id<ChannelMarker>, 
+        user_id: Id<UserMarker>, 
+        allow: Option<Permissions>, 
+        deny: Option<Permissions>,
+        kind: PermissionOverwriteType
+    ) -> Result<(), Error> {
+        let url = format!("{}/channels/{}/permissions/{}",DISCORD_API_ENDPOINT, channel_id, user_id);
+
+        let payload = PermissionOverwrite {
+            allow, 
+            deny,
+            id: user_id.cast(),
+            kind
+        };
+
+        let response = CLIENT.put(&url)
+            .header(AUTHORIZATION, format!("Bot {}", self.token))
+            .header(CONTENT_TYPE, "application/json")
+            .json(&payload)
+            .send()
+            .await?;
+
+        if response.status().is_success() {
+            Ok(())
+        }
+        else {
+            Err(Error::Generic(format!("Errore Discord: {}", response.text().await?).into()))
+        }
     }
 }

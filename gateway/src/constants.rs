@@ -3,11 +3,19 @@ use std::{collections::HashMap, env, sync::LazyLock};
 use reqwest::{Client, ClientBuilder, header::{self, HeaderValue}};
 use twilight_gateway::{EventType, EventTypeFlags, Intents};
 
-use crate::dispatcher::{DispatchStrategy, Dispatcher};
+use crate::{dispatcher::{DispatchStrategy, Dispatcher}, middleware::EventMiddleware, middlewares::voice_state::VoiceStateMiddleware};
 
 pub static DISPATCH_STRATEGIES: LazyLock<HashMap<EventType, DispatchStrategy>> = LazyLock::new(|| {
     let map = HashMap::new();
     
+    map
+});
+
+pub static MIDDLEWARES: LazyLock<HashMap<EventType, Box<dyn EventMiddleware>>> = LazyLock::new(|| { 
+    let mut map: HashMap<EventType, Box<dyn EventMiddleware>> = HashMap::new();
+
+    map.insert(EventType::VoiceStateUpdate, Box::new(VoiceStateMiddleware::new()));
+
     map
 });
 

@@ -69,20 +69,20 @@ pub trait CommandEvents {
         false
     }
 
-    async fn on_message_create(&self, _ctx: &RouteContext<()>, _payload: MessageCreate) -> Result<Value, Error> { Ok(Value::Null) }
-    async fn on_message_update(&self, _ctx: &RouteContext<()>, _payload: MessageUpdate) -> Result<Value, Error> { Ok(Value::Null) }
-    async fn on_message_delete(&self, _ctx: &RouteContext<()>, _payload: MessageDelete) -> Result<Value, Error> { Ok(Value::Null) }
-    async fn on_message_delete_bulk(&self, _ctx: &RouteContext<()>, _payload: MessageDeleteBulk) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_message_create(&self, _ctx: &RouteContext<()>, _payload: MessageCreate, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_message_update(&self, _ctx: &RouteContext<()>, _payload: MessageUpdate, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_message_delete(&self, _ctx: &RouteContext<()>, _payload: MessageDelete, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_message_delete_bulk(&self, _ctx: &RouteContext<()>, _payload: MessageDeleteBulk, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
 
-    async fn on_voice_state_update(&self, _ctx: &RouteContext<()>, _payload: VoiceStateUpdate) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_voice_state_update(&self, _ctx: &RouteContext<()>, _payload: VoiceStateUpdate, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
 
-    async fn dispatch(&self, ctx: &RouteContext<()>, event: DispatchEvent) -> Result<Value, Error> {
+    async fn dispatch(&self, ctx: &RouteContext<()>, event: DispatchEvent, metadata: Value) -> Result<Value, Error> {
         match event {
-            DispatchEvent::MessageCreate(m) => self.on_message_create(ctx, *m).await,
-            DispatchEvent::MessageUpdate(m) => self.on_message_update(ctx, *m).await,
-            DispatchEvent::MessageDelete(m) => self.on_message_delete(ctx, m).await,
-            DispatchEvent::MessageDeleteBulk(m) => self.on_message_delete_bulk(ctx, m).await,
-            DispatchEvent::VoiceStateUpdate(s) => self.on_voice_state_update(ctx, *s).await,
+            DispatchEvent::MessageCreate(m) => self.on_message_create(ctx, *m, metadata).await,
+            DispatchEvent::MessageUpdate(m) => self.on_message_update(ctx, *m, metadata).await,
+            DispatchEvent::MessageDelete(m) => self.on_message_delete(ctx, m, metadata).await,
+            DispatchEvent::MessageDeleteBulk(m) => self.on_message_delete_bulk(ctx, m, metadata).await,
+            DispatchEvent::VoiceStateUpdate(s) => self.on_voice_state_update(ctx, *s, metadata).await,
             e => {
                 worker::console_warn!("Unhandled event: {e:?}");
                 Ok(Value::Null)

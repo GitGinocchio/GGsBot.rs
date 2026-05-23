@@ -4,20 +4,16 @@ use reqwest::Client;
 
 use crate::{
     build_commands, 
-    build_queue_enum, 
-    build_queue_handlers, 
     build_triggers, 
     build_uihandlers, 
     commands, 
     framework::{
         discord::command::CommandMap, 
         traits::{
-            queue::QueueMap, 
             trigger::TriggerMap, 
             ui::UiHandlerMap
         }
-    }, 
-    queues, 
+    },
     triggers, 
     ui
 };
@@ -43,11 +39,3 @@ pub static COMMANDS: LazyLock<CommandMap> = LazyLock::new(|| {
 pub static TRIGGERS: LazyLock<TriggerMap> = LazyLock::new(|| build_triggers!(
     triggers::apod::ApodTrigger
 ));
-
-pub static QUEUES: LazyLock<QueueMap> = LazyLock::new(|| build_queue_handlers!(
-    queues::apod::ApodQueue
-));
-
-build_queue_enum!(
-    Apod => queues::apod::ApodQueueMessage
-);

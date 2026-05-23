@@ -2,6 +2,8 @@ use twilight_gateway::{Shard, ShardId, StreamExt};
 
 pub mod constants;
 pub mod dispatcher;
+pub mod middleware;
+pub mod middlewares;
 
 use constants::{INTENTS, DISCORD_TOKEN};
 use twilight_model::gateway::event::DispatchEvent;
