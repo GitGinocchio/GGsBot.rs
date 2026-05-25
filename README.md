@@ -1,8 +1,6 @@
 
 # GGsBot.rs 
 
-## Structure
-
 <img src="./resources/graph.svg" />
 
 ## TODOs
