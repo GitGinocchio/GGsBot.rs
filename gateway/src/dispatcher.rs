@@ -12,12 +12,12 @@ use crate::constants::{CLIENT, DISPATCH_STRATEGIES, HTTP_ENDPOINT, QUEUE_ENDPOIN
 use crate::middleware::{MiddlewareResponse, get_middlewares};
 
 pub enum DispatchStrategy {
-    Smart { queue_delay: u64 }, // based on rate-limiter/429
+    Smart { queue_delay: u64 },         // based on rate-limiter/429
     
-    AlwaysWorker,
-    AlwaysQueue { queue_delay: u64 },
+    AlwaysWorker,                       // Use always worker and do not care about 429
+    AlwaysQueue { queue_delay: u64 },   // Use Always queue
 
-    WorkerOnly // Use worker only when available
+    WorkerOnly                          // Use worker only when available
 }
 
 pub struct Dispatcher {
@@ -39,7 +39,9 @@ impl Dispatcher {
         let kind = event.kind();
         
         let strategy = DISPATCH_STRATEGIES
-            .get(&kind)
+            .iter()
+            .find(|(flags, _)| flags.contains(kind.into()))
+            .map(|(_, strategy)| strategy)
             .unwrap_or(&DispatchStrategy::Smart { queue_delay: 0 });
 
         println!("📥 [EVENT] {:?}", kind);
@@ -150,8 +152,14 @@ impl Dispatcher {
     }
 
     async fn send_to_worker(&self, payload: &Value) -> Result<Response, anyhow::Error> {
+        let event_kind = payload
+            .get("kind")
+            .and_then(|k| k.as_str())
+            .unwrap_or("unknown");
+
         let response = CLIENT
             .post(&*HTTP_ENDPOINT)
+            .header("X-Event-Kind", event_kind)
             .json(&payload)
             .send()
             .await?;

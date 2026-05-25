@@ -1,14 +1,17 @@
-use std::{collections::HashMap, env, sync::LazyLock};
+use std::{env, sync::LazyLock};
 
 use reqwest::{Client, ClientBuilder, header::{self, HeaderValue}};
-use twilight_gateway::{EventType, EventTypeFlags, Intents};
+use twilight_gateway::{EventTypeFlags, Intents};
 
 use crate::{dispatcher::{DispatchStrategy, Dispatcher}, middleware::EventMiddleware, middlewares::{discard_self::DiscardSelfEventsMiddleware, voice_state::VoiceStateMiddleware}};
 
-pub static DISPATCH_STRATEGIES: LazyLock<HashMap<EventType, DispatchStrategy>> = LazyLock::new(|| {
-    let map = HashMap::new();
-    
-    map
+pub static DISPATCH_STRATEGIES: LazyLock<Vec<(EventTypeFlags, DispatchStrategy)>> = LazyLock::new(|| {
+    let mut list = Vec::new();
+
+    list.push((EventTypeFlags::VOICE_STATE_UPDATE, DispatchStrategy::WorkerOnly));
+    list.push((EventTypeFlags::all(), DispatchStrategy::Smart { queue_delay: 0 }));
+
+    list
 });
 
 pub static MIDDLEWARES: LazyLock<Vec<(EventTypeFlags, Box<dyn EventMiddleware>)>> = LazyLock::new(|| { 
