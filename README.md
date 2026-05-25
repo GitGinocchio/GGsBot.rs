@@ -3,7 +3,7 @@
 
 ## Structure
 
-<img src="./resources/graph.png" />
+<img src="./resources/graph.svg" />
 
 ## TODOs
 - [ ] Creare delle UI per la configurazione dei sottocomandi
