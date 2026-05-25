@@ -1,8 +1,7 @@
 use dashmap::DashMap;
-use serde_json::Value;
 use twilight_model::{gateway::{event::DispatchEvent, payload::incoming::VoiceStateUpdate}, id::{Id, marker::{ChannelMarker, GuildMarker, UserMarker}}};
 
-use crate::{dispatcher::DispatchStrategy, middleware::EventMiddleware};
+use crate::{dispatcher::DispatchStrategy, middleware::{EventMiddleware, MiddlewareResponse}};
 
 #[derive(Hash, PartialEq, Eq)]
 struct VoiceKey {
@@ -25,14 +24,14 @@ impl VoiceStateMiddleware {
 impl EventMiddleware for VoiceStateMiddleware {
     fn name(&self) -> &'static str { "voice-state-metadata" } 
 
-    fn execute(&self, event: &DispatchEvent, _strategy: &DispatchStrategy) -> Result<Value, anyhow::Error> {
+    fn execute(&self, event: &DispatchEvent, _strategy: &DispatchStrategy) -> Result<MiddlewareResponse, anyhow::Error> {
         let mut metadata = serde_json::Value::Null;
 
         if let DispatchEvent::VoiceStateUpdate(box_update) = event {
             let update: &VoiceStateUpdate = box_update;
             
             let Some(guild_id) = update.guild_id else {
-                return Ok(metadata);
+                return Ok(MiddlewareResponse::SendWithMetadata(metadata));
             };
             
             let key = VoiceKey {
@@ -52,6 +51,6 @@ impl EventMiddleware for VoiceStateMiddleware {
             });
         }
 
-        Ok(metadata)
+        Ok(MiddlewareResponse::SendWithMetadata(metadata))
     }
 }

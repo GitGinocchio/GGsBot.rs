@@ -4,6 +4,7 @@ pub mod constants;
 pub mod dispatcher;
 pub mod middleware;
 pub mod middlewares;
+pub mod traits;
 
 use constants::{INTENTS, DISCORD_TOKEN};
 use twilight_model::gateway::event::DispatchEvent;

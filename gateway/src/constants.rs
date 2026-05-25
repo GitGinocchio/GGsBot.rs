@@ -11,12 +11,12 @@ pub static DISPATCH_STRATEGIES: LazyLock<HashMap<EventType, DispatchStrategy>> =
     map
 });
 
-pub static MIDDLEWARES: LazyLock<HashMap<EventType, Box<dyn EventMiddleware>>> = LazyLock::new(|| { 
-    let mut map: HashMap<EventType, Box<dyn EventMiddleware>> = HashMap::new();
+pub static MIDDLEWARES: LazyLock<Vec<(EventTypeFlags, Box<dyn EventMiddleware>)>> = LazyLock::new(|| { 
+    let mut list: Vec<(EventTypeFlags, Box<dyn EventMiddleware>)> = Vec::new();
 
-    map.insert(EventType::VoiceStateUpdate, Box::new(VoiceStateMiddleware::new()));
+    list.push((EventTypeFlags::VOICE_STATE_UPDATE, Box::new(VoiceStateMiddleware::new())));
 
-    map
+    list
 });
 
 pub static WANTED_EVENTS: LazyLock<EventTypeFlags> = LazyLock::new(|| {
@@ -71,4 +71,8 @@ pub static AUTHORIZATION_TOKEN: LazyLock<String> = LazyLock::new(|| {
 
 pub static DISCORD_TOKEN: LazyLock<String> = LazyLock::new(|| {
     env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN")
+});
+
+pub static BOT_ID: LazyLock<String> = LazyLock::new(|| {
+    env::var("BOT_ID").expect("missing BOT_ID")
 });

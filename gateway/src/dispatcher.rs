@@ -3,12 +3,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use anyhow::Error;
-use reqwest::Response;
+use reqwest::{Response};
 use serde_json::{Value, json};
 use tokio::sync::Mutex;
 use twilight_model::gateway::event::DispatchEvent;
 
-use crate::constants::{CLIENT, DISPATCH_STRATEGIES, HTTP_ENDPOINT, MIDDLEWARES, QUEUE_ENDPOINT};
+use crate::constants::{CLIENT, DISPATCH_STRATEGIES, HTTP_ENDPOINT, QUEUE_ENDPOINT};
+use crate::middleware::{MiddlewareResponse, get_middlewares};
 
 pub enum DispatchStrategy {
     Smart { queue_delay: u64 }, // based on rate-limiter/429
@@ -34,7 +35,7 @@ impl Dispatcher {
 }
 
 impl Dispatcher {
-    pub async fn dispatch(&self, event: &DispatchEvent) -> Result<Response, anyhow::Error> {
+    pub async fn dispatch(&self, event: &DispatchEvent) -> Result<(), anyhow::Error> {
         let kind = event.kind();
         
         let strategy = DISPATCH_STRATEGIES
@@ -45,11 +46,34 @@ impl Dispatcher {
 
         let event_value = serde_json::to_value(event)?;
 
-        let metadata = if let Some(middleware) = MIDDLEWARES.get(&kind) {
+        let mut accumulated_metadata = serde_json::Map::new();
+
+        for middleware in get_middlewares(kind.into()) {
             println!("  ⚙️  [MIDDLEWARE] Running: {}", middleware.name());
-            Some(middleware.execute(event, strategy)?)
+            
+            match middleware.execute(event, strategy)? {
+                MiddlewareResponse::Discard => {
+                    println!("  🛑 [MIDDLEWARE] Event discarded by {}", middleware.name());
+                    return Ok(());
+                }
+                MiddlewareResponse::SendWithMetadata(new_metadata) => {
+                    if let serde_json::Value::Object(obj) = new_metadata {
+                        accumulated_metadata.extend(obj);
+                    } else {
+                        println!(
+                            "  ⚠️  [MIDDLEWARE] Warning: {} returned metadata that is not a JSON Object. Ignored.", 
+                            middleware.name()
+                        );
+                    }
+                }
+                MiddlewareResponse::Send => {}
+            }
+        }
+
+        let metadata = if accumulated_metadata.is_empty() {
+            serde_json::Value::Null
         } else {
-            None
+            serde_json::Value::Object(accumulated_metadata)
         };
 
         let payload = json!({
@@ -79,7 +103,9 @@ impl Dispatcher {
 
                 self.send_to_worker(&payload).await
             }
-        }
+        }?;
+
+        Ok(())
     }
 
     async fn trigger_fallback(&self) {
