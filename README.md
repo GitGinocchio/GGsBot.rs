@@ -1,4 +1,10 @@
 
+# GGsBot.rs 
+
+## Structure
+
+<img src="./resources/graph.png" />
+
 ## TODOs
 - [ ] Creare delle UI per la configurazione dei sottocomandi
 > Esempio:
