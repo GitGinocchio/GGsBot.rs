@@ -17,7 +17,7 @@ pub enum DispatchStrategy {
     AlwaysWorker,                       // Use always worker and do not care about 429
     AlwaysQueue { queue_delay: u64 },   // Use Always queue
 
-    WorkerOnly                          // Use worker only when available
+    WorkerOnly                          // Use worker only when unavailable
 }
 
 pub struct Dispatcher {

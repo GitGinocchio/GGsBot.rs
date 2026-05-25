@@ -8,7 +8,7 @@ use crate::{dispatcher::{DispatchStrategy, Dispatcher}, middleware::EventMiddlew
 pub static DISPATCH_STRATEGIES: LazyLock<Vec<(EventTypeFlags, DispatchStrategy)>> = LazyLock::new(|| {
     let mut list = Vec::new();
 
-    list.push((EventTypeFlags::VOICE_STATE_UPDATE, DispatchStrategy::WorkerOnly));
+    list.push((EventTypeFlags::VOICE_STATE_UPDATE, DispatchStrategy::AlwaysWorker));
     list.push((EventTypeFlags::all(), DispatchStrategy::Smart { queue_delay: 0 }));
 
     list
