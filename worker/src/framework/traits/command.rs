@@ -8,7 +8,7 @@ use twilight_model::{
     }, 
     http::interaction::InteractionResponse
 };
-use worker::RouteContext;
+use worker::{Env, RouteContext};
 
 use crate::error::Error;
 
@@ -69,20 +69,20 @@ pub trait CommandEvents {
         false
     }
 
-    async fn on_message_create(&self, _ctx: &RouteContext<()>, _payload: MessageCreate, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
-    async fn on_message_update(&self, _ctx: &RouteContext<()>, _payload: MessageUpdate, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
-    async fn on_message_delete(&self, _ctx: &RouteContext<()>, _payload: MessageDelete, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
-    async fn on_message_delete_bulk(&self, _ctx: &RouteContext<()>, _payload: MessageDeleteBulk, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_message_create(&self, _env: Env, _payload: MessageCreate, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_message_update(&self, _env: Env, _payload: MessageUpdate, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_message_delete(&self, _env: Env, _payload: MessageDelete, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_message_delete_bulk(&self, _env: Env, _payload: MessageDeleteBulk, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
 
-    async fn on_voice_state_update(&self, _ctx: &RouteContext<()>, _payload: VoiceStateUpdate, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
+    async fn on_voice_state_update(&self, _env: Env, _payload: VoiceStateUpdate, _metadata: Value) -> Result<Value, Error> { Ok(Value::Null) }
 
-    async fn dispatch(&self, ctx: &RouteContext<()>, event: DispatchEvent, metadata: Value) -> Result<Value, Error> {
+    async fn dispatch(&self, env: Env, event: DispatchEvent, metadata: Value) -> Result<Value, Error> {
         match event {
-            DispatchEvent::MessageCreate(m) => self.on_message_create(ctx, *m, metadata).await,
-            DispatchEvent::MessageUpdate(m) => self.on_message_update(ctx, *m, metadata).await,
-            DispatchEvent::MessageDelete(m) => self.on_message_delete(ctx, m, metadata).await,
-            DispatchEvent::MessageDeleteBulk(m) => self.on_message_delete_bulk(ctx, m, metadata).await,
-            DispatchEvent::VoiceStateUpdate(s) => self.on_voice_state_update(ctx, *s, metadata).await,
+            DispatchEvent::MessageCreate(m) => self.on_message_create(env, *m, metadata).await,
+            DispatchEvent::MessageUpdate(m) => self.on_message_update(env, *m, metadata).await,
+            DispatchEvent::MessageDelete(m) => self.on_message_delete(env, m, metadata).await,
+            DispatchEvent::MessageDeleteBulk(m) => self.on_message_delete_bulk(env, m, metadata).await,
+            DispatchEvent::VoiceStateUpdate(s) => self.on_voice_state_update(env, *s, metadata).await,
             e => {
                 worker::console_warn!("Unhandled event: {e:?}");
                 Ok(Value::Null)

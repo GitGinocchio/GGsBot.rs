@@ -11,6 +11,7 @@ use crate::{
 mod constants;
 mod commands;
 mod error;
+mod gateway;
 mod framework;
 mod queues;
 mod services;
@@ -41,7 +42,6 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 
     Router::new()
         .post_async("/api/interaction", |req, ctx| api::interaction::post(req, ctx))
-        .post_async("/api/gateway", |req, ctx| api::gateway::post(req, ctx))
         .get_async("/api/commands", |req, ctx| api::commands::get(req, ctx))
         .run(req, env)
         .await

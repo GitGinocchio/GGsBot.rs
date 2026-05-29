@@ -25,13 +25,11 @@ impl EventMiddleware for VoiceStateMiddleware {
     fn name(&self) -> &'static str { "voice-state-metadata" } 
 
     fn execute(&self, event: &DispatchEvent, _strategy: &DispatchStrategy) -> Result<MiddlewareResponse, anyhow::Error> {
-        let mut metadata = serde_json::Value::Null;
-
         if let DispatchEvent::VoiceStateUpdate(box_update) = event {
             let update: &VoiceStateUpdate = box_update;
             
             let Some(guild_id) = update.guild_id else {
-                return Ok(MiddlewareResponse::SendWithMetadata(metadata));
+                return Ok(MiddlewareResponse::Discard);
             };
             
             let key = VoiceKey {
@@ -39,18 +37,27 @@ impl EventMiddleware for VoiceStateMiddleware {
                 user_id: update.user_id,
             };
 
-            let previous_id = self.states.get(&key).map(|r| r.value().clone());
+            let response = match self.states.get(&key).map(|r| r.value().clone()) {
+                Some(previous_id) => {
+                    let metadata = serde_json::json!({
+                        "before_channel_id": previous_id
+                    });
+
+                    Ok(MiddlewareResponse::SendWithMetadata(metadata))
+                },
+                None => {
+                    Ok(MiddlewareResponse::Send)
+                }
+            };
 
             match update.channel_id {
                 Some(new_id) => { self.states.insert(key, new_id); }
                 None => { self.states.remove(&key); }
             }
-
-            metadata = serde_json::json!({
-                "before_channel_id": previous_id
-            });
+            
+            return response;
         }
 
-        Ok(MiddlewareResponse::SendWithMetadata(metadata))
+        Ok(MiddlewareResponse::Send)
     }
 }

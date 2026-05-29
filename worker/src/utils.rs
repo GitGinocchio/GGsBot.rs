@@ -73,7 +73,7 @@ pub async fn update_commands(env: &Env) -> Result<Response, Error> {
         .to_string();
 
     let token = env
-        .var("DISCORD_TOKEN")
+        .secret("DISCORD_TOKEN")
         .map_err(|e| Error::EnvironmentVariableNotFound(e.to_string()))?
         .to_string();
 

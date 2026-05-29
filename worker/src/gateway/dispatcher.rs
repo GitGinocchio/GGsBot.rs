@@ -16,16 +16,16 @@ pub struct DispatcherEnvelope {
     metadata: Value
 }
 
-pub struct Gateway {
+pub struct Dispatcher {
     ctx: RouteContext<()>
 }
 
-impl Gateway {
+impl Dispatcher {
     pub fn new(ctx: RouteContext<()>) -> Self {
         Self { ctx: ctx }
     }
 
-    pub async fn handle_request(&self, mut req: Request) -> Result<Response> {
+    pub async fn dispatch(&self, mut req: Request) -> Result<Response> {
         let data: DispatcherEnvelope = req.json().await?;
 
         let event_name = data.kind
@@ -47,10 +47,9 @@ impl Gateway {
             let name = name.clone();
             let event = event.clone();
             let metadata = data.metadata.clone();
-            let ctx = &self.ctx;
 
             Some(async move {
-                let result = handlers.dispatch(ctx, event, metadata).await;
+                let result = handlers.dispatch(self.ctx.env.clone(), event, metadata).await;
                 (name, result)
             })
         });

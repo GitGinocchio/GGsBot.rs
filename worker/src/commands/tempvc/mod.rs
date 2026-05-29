@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use twilight_model::{application::interaction::Interaction, gateway::{event::EventType, payload::incoming::VoiceStateUpdate}, guild::Permissions, http::{interaction::InteractionResponse, permission_overwrite::PermissionOverwriteType}, id::{Id, marker::ChannelMarker}};
-use worker::RouteContext;
+use worker::{Env, RouteContext};
 
 use crate::{
     bindings::{KV_BINDING, QueueBinding}, build_commands, commands::tempvc, error::Error, framework::{discord::command::{Command, CommandMap}, structs::{config::extension::ExtensionConfig, kv::NamespacedKv, queue::QueueMessage}, traits::{command::{CommandController, CommandEvents}, namespaces::KvExt}}, queues::tempvc::TempvcDeleteChannelMessage, services::discord::DiscordService
@@ -51,19 +51,20 @@ impl CommandController for Tempvc {
     }
 }
 
+/*
 #[async_trait(?Send)]
 impl CommandEvents for Tempvc {
     fn responds_to(&self, event_type: EventType) -> bool {
         matches!(event_type, EventType::VoiceStateUpdate)
     }
 
-    async fn on_voice_state_update(&self, ctx: &RouteContext<()>, state: VoiceStateUpdate, metadata: Value) -> Result<Value, Error> {
+    async fn on_voice_state_update(&self, env: &Env, state: VoiceStateUpdate, metadata: Value) -> Result<Value, Error> {
         worker::console_debug!("[tempvc-events] Received voice_state_update: {state:?}");
         let Some(guild_id) = state.guild_id else { 
             return Err(Error::Generic("Missing guild_id".into())) 
         };
 
-        let kv = ctx.kv(KV_BINDING)?;
+        let kv = env.kv(KV_BINDING)?;
         let guild_key = format!("guilds:{}", guild_id);
         let guild_kv = NamespacedKv::new(kv, guild_key.clone());
 
@@ -76,8 +77,9 @@ impl CommandEvents for Tempvc {
             return Ok(Value::String(format!("No tempvc config for this server!")))
         };
 
-        let discord = DiscordService::new(&ctx.env)?;
+        let discord = DiscordService::new(env)?;
 
+        // TODO: Il check interno deve essere fatto ogni volta che before_channel_id esiste
         let Some(channel_id) = state.channel_id else {
             let before_channel_id = metadata
                 .get("before_channel_id")
@@ -172,6 +174,7 @@ impl CommandEvents for Tempvc {
         Ok(Value::String(format!("Channel '{new_channel_name}' created successfully!")))
     }
 }
+*/
 
 #[async_trait(?Send)]
 impl Command for Tempvc {
@@ -194,7 +197,9 @@ impl Command for Tempvc {
         Some(self)
     }
 
+    /*
     fn get_events(&self) -> Option<&dyn CommandEvents> {
         Some(self)
     }
+    */
 }

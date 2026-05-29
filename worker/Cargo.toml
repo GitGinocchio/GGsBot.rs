@@ -14,12 +14,12 @@ default = ["console_error_panic_hook"]
 cfg-if = "1.0.4"
 worker = { version = "0.8.3", features = [ "queue" ] }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.67"
+serde_json = "1.0.150"
 serde_repr = "0.1.20"
 thiserror = "2.0.18"
 ed25519-dalek = "2.2.0"
 hex = "0.4.2"
-reqwest = { version = "0.13.3", features = ["json"] }
+reqwest = { version = "0.13.4", features = ["json"] }
 async-trait = "0.1.57"
 chrono = { version = "0.4.44", features = ["serde"] }
 twilight-model = { version = "0.17.1", features = [] }
@@ -32,6 +32,7 @@ url = "2.5.8"
 console_error_panic_hook = { version = "0.1.1", optional = true }
 futures = "0.3.32"
 strum_macros = "0.28.0"
+wasm-bindgen = { version = "0.2.122", features = [ "serde" ] }
 
 [profile.release]
 opt-level = "z"     # Ottimizza specificamente per la dimensione del file

@@ -18,6 +18,8 @@ use crate::{
     ui
 };
 
+pub const DEFAULT_DISCORD_GATEWAY_URL: &str = "wss://gateway.discord.gg";
+
 pub static CLIENT: LazyLock<Client> = LazyLock::new(|| Client::new());
 
 pub static UIHANDLERS: LazyLock<UiHandlerMap> = LazyLock::new(|| build_uihandlers!(

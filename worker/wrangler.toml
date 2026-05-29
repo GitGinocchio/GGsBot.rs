@@ -8,7 +8,7 @@ main = "build/index.js"
 command = "cargo install -q worker-build && worker-build --release" # required
 
 [assets]
-directory = "./src/assets"
+directory = "./public"
 
 [vars]
 WORKER_ENV = "production"
