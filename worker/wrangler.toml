@@ -25,6 +25,14 @@ DISCORD_DEVELOPER_ID = "778017089230209045"
 [version_metadata]
 binding = "metadata"
 
+[[durable_objects.bindings]]
+name = "GATEWAY"
+class_name = "Gateway"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Gateway"]
+
 [[kv_namespaces]]
 binding = "ggsbotkv"
 id = "c1c5302906b04ad1af9c6f87b80f1367"

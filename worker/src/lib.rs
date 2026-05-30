@@ -41,6 +41,8 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
     utils::set_panic_hook();
 
     Router::new()
+        .on_async("/api/gateway/shards/connect", |req, ctx| api::gateway::shards::connect::connect(req, ctx))
+        //.on_async("/api/gateway/shards/health", |req, ctx| api::gateway::shards::health::health(req, ctx))
         .post_async("/api/interaction", |req, ctx| api::interaction::post(req, ctx))
         .get_async("/api/commands", |req, ctx| api::commands::get(req, ctx))
         .run(req, env)

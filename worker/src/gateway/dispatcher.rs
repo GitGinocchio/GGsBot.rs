@@ -1,55 +1,37 @@
 use std::collections::HashMap;
 
-use serde::{Deserialize, de::DeserializeSeed};
 use serde_json::{json, Value};
-use twilight_model::gateway::event::{DispatchEvent, DispatchEventWithTypeDeserializer, EventType};
-use worker::{Request, Response, Result, RouteContext};
+use twilight_model::gateway::event::DispatchEvent;
+use worker::{Env, Response, Result, Storage};
 
-use crate::constants::COMMANDS;
-
-#[derive(Deserialize, Clone, Debug)]
-pub struct DispatcherEnvelope {
-    event: Value,
-    kind: EventType,
-
-    #[serde(default)]
-    metadata: Value
-}
+use crate::{constants::COMMANDS};
 
 pub struct Dispatcher {
-    ctx: RouteContext<()>
+    storage: Storage,
+    env: Env 
 }
 
 impl Dispatcher {
-    pub fn new(ctx: RouteContext<()>) -> Self {
-        Self { ctx: ctx }
+    pub fn new(storage: Storage, env: Env) -> Self {
+        Self {
+            storage,
+            env
+        }
     }
 
-    pub async fn dispatch(&self, mut req: Request) -> Result<Response> {
-        let data: DispatcherEnvelope = req.json().await?;
-
-        let event_name = data.kind
-            .name()
-            .ok_or(worker::Error::from("Could not get event kind name"))?;
-
-        let deserializer = DispatchEventWithTypeDeserializer::new(event_name);
-        let event: DispatchEvent = deserializer
-            .deserialize(data.event)
-            .map_err(|e| worker::Error::from(format!("Errore deserializzazione: {}", e)))?;
-
+    pub async fn dispatch(&self, event: DispatchEvent) -> Result<Response> {
         let tasks = COMMANDS.iter().filter_map(|(name, command)| {
             let handlers = command.get_events()?;
             
-            if !handlers.responds_to(data.kind) {
+            if !handlers.responds_to(event.kind()) {
                 return None;
             }
 
             let name = name.clone();
             let event = event.clone();
-            let metadata = data.metadata.clone();
 
             Some(async move {
-                let result = handlers.dispatch(self.ctx.env.clone(), event, metadata).await;
+                let result = handlers.dispatch(self.env.clone(), event, Value::Null).await;
                 (name, result)
             })
         });
@@ -74,7 +56,7 @@ impl Dispatcher {
             "responses" : responses
         });
 
-        worker::console_debug!("[gateway: {event_name}] response: {payload}");
+        worker::console_debug!("[gateway: {:?}] response: {}", event.kind(), payload);
 
         Response::from_json(&payload)
     }

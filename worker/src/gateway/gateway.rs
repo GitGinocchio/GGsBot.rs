@@ -1,198 +1,167 @@
-use std::sync::atomic::AtomicBool;
-
-use futures::StreamExt;
-use serde::{Deserialize, de::DeserializeSeed};
-use serde_json::json;
+use serde::{de::DeserializeSeed};
 use twilight_model::gateway::{event::{GatewayEvent, GatewayEventDeserializer}, payload::outgoing::Heartbeat as HeartbeatPayload};
-use worker::{DurableObject, Env, Request, Response, Result, State, Storage, WebSocket, WebsocketEvent, durable_object, wasm_bindgen::prelude::wasm_bindgen, wasm_bindgen_futures};
+use worker::{Date, DateInit::Millis, DurableObject, Env, Request, Response, Result, Router, ScheduledTime, State, Storage, WebSocket, WebSocketIncomingMessage, WebsocketEvent, durable_object, wasm_bindgen::prelude::wasm_bindgen, wasm_bindgen_futures};
 
-use crate::{constants::CLIENT, error::Error, gateway::queries::{get_last_sequence, save_last_sequence, setup_storage}};
-
-pub static CONNECT_URL: &'static str  = "https://discord.com/api/v10/gateway/bot";
-
-#[derive(Deserialize, Debug)]
-struct SessionStartLimit {
-    total: u32,
-    remaining: u32,
-    reset_after: u64,
-    max_concurrency: u32,
-}
-
-#[derive(Deserialize, Debug)]
-struct GatewayBotResponse {
-    url: String,
-    shards: u32,
-    session_start_limit: SessionStartLimit,
-}
+use crate::{error::Error, gateway::{dispatcher::Dispatcher, queries::{delete_session, get_heartbeat_ack, get_heartbeat_interval, get_last_sequence, save_heartbeat_interval, save_last_sequence, set_heartbeat_ack}}};
 
 #[durable_object]
 pub struct Gateway {
-    state: State,
-    env: Env,
-    is_connected: AtomicBool
+    pub (crate) state: State,
+    pub (crate) env: Env,
+    pub (crate) dispatcher: Dispatcher
+}
+
+impl Gateway {
+    pub fn get_shard_id(&self) -> Result<u32> {
+        let do_name = self.state.id().name()
+            .ok_or_else(|| worker::Error::from("Impossibile recuperare il nome del DO"))?;
+
+        let shard_number_str = do_name.split('-').last()
+            .ok_or_else(|| worker::Error::from("Formato nome DO invalido"))?;
+
+        let shard_id = shard_number_str.parse::<u32>()
+            .map_err(|_| worker::Error::from("Impossibile convertire lo shard ID in numero"))?;
+
+        Ok(shard_id)
+    }
+
+    pub fn get_websocket(&self) -> Result<WebSocket> {
+        let shard_id = self.get_shard_id()?;
+
+        self.state
+            .get_websockets()
+            .first()
+            .ok_or(Error::Generic(format!("Shard {shard_id} is not connected with discord via websocket!")).into())
+            .cloned()
+    }
 }
 
 impl DurableObject for Gateway {
     fn new(state: State, env: Env) -> Self {
         Self {
+            dispatcher: Dispatcher::new(state.storage(), env.clone()),
             state,
             env,
-            is_connected: AtomicBool::new(false)
         }
     }
 
-    async fn fetch(&self, _req: Request) -> Result<Response> {
-        if self.is_connected.load(std::sync::atomic::Ordering::Relaxed) {
-            worker::console_log!("[DO Shard] Richiesta ricevuta, ma sono già connesso al Gateway di Discord. Ignoro.");
-            return Response::from_json(&serde_json::json!({
-                "status": "already_connected",
-                "message": "Questo Shard è già attivo e in ascolto."
-            }));
-        }
-
-        let storage = self.state.storage();
-        setup_storage(&storage).await?;
-
-        let token = self.env
-            .secret("DISCORD_TOKEN")
-            .map_err(|e| Error::EnvironmentVariableNotFound(e.to_string()))?
-            .to_string();
-
-        let ws = connect(token).await?;
-
-        let env = self.env.clone();
-
-        // WARN: Qui se andasse in errore il thread non lo sapremmo mai...
-        wasm_bindgen_futures::spawn_local(async move {
-            if let Err(e) = handle_events(ws, env, storage).await {
-                worker::console_error!("Error handling events from the discord gateway: {e}");
-            }
-        });
-
-        self.is_connected.store(true, std::sync::atomic::Ordering::Relaxed);
-
-        Response::from_json(&json!({
-            "status" : "success",
-            "message" : "Connected to the discord gateway"
-        }))
-    }
-}
-
-pub async fn connect(token: String) -> Result<WebSocket> {
-    // TODO: Spostare questa parte e fare in modo che al primo avvio vengano creati
-    // N Durable Object quanti sono quelli richiesti da Discord dopo questa response
-    let gateway_info: GatewayBotResponse = CLIENT.get(CONNECT_URL)
-        .header("Authorization", &format!("Bot {}", token))
-        .send()
-        .await
-        .map_err(|e| Error::ReqwestError(e))?
-        .json()
-        .await
-        .map_err(|e| Error::ReqwestError(e))?;
-
-    worker::console_debug!("Discord Gateway INFO: {gateway_info:?}");
-
-    if gateway_info.session_start_limit.remaining == 0 {
-        worker::console_error!("Session start limit reached!");
-        return Err(Error::UpstreamError(format!("Discord session start limit reached!")).into())
+    async fn fetch(&self, req: Request) -> Result<Response> {
+        Router::new()
+            .post_async("/connect", |req, ctx| self.connect(req, ctx))
+            .get_async("/health", |req, ctx| self.health(req, ctx))
+            .run(req, self.env.clone()).await
     }
 
-    let url = format!("{}?v=10&encoding=json", gateway_info.url);
-    
-    let headers = worker::Headers::new();
-    headers.set("Upgrade", "websocket")?;
-    headers.set("Connection", "Upgrade")?;
-
-    let mut init = worker::RequestInit::new();
-    init.with_method(worker::Method::Get);
-    init.with_headers(headers);
-
-    let request = worker::Request::new_with_init(&url, &init)?;
-
-    let response = worker::Fetch::Request(request)
-        .send()
-        .await?;
-
-    let ws = response.websocket().ok_or_else(|| {
-        Error::UpstreamError(format!("Websocket was not provided in the response"))
-    })?;
-
-    ws.accept()?;
-
-    Ok(ws)
-}
-
-pub async fn handle_events(ws: WebSocket, _env: Env, storage: Storage) -> Result<()> {
-    let mut stream = ws.events()?;
-    
-    while let Some(maybe_event) = stream.next().await {
-        let event = maybe_event.or_else(|e| {
-            Err(Error::Generic(format!("Error receiving ws gateway event: {e:?}")))
+    async fn websocket_message(&self, ws: WebSocket, msg: WebSocketIncomingMessage) -> Result<()> {
+        let WebSocketIncomingMessage::String(msg) = msg else {
+            return Err(Error::UpstreamError("Received a binary message!".into()).into());
+        };
+        
+        let deserializer = GatewayEventDeserializer::from_json(&msg).ok_or_else(|| {
+            Error::Generic(format!("Error instantiating gataway event deserializer"))
         })?;
 
-        let gateway_event = match event {
-            WebsocketEvent::Message(message) => {
-                let payload = message.text().ok_or_else(|| {
-                    Error::InvalidPayload(format!("Invalid ws event payload: {message:?}"))
-                })?;
-                
-                let deserializer = GatewayEventDeserializer::from_json(&payload).ok_or_else(|| {
-                    Error::Generic(format!("Error instantiating gataway event deserializer"))
-                })?;
+        let mut json_deserializer = serde_json::Deserializer::from_str(&msg);
+        let gateway_event: GatewayEvent = deserializer
+            .deserialize(&mut json_deserializer)
+            .map_err(|e| Error::Generic(format!("Errore deserializzazione GatewayEvent: {e}")))?;
 
-                let mut json_deserializer = serde_json::Deserializer::from_str(&payload);
-                let gateway_event: GatewayEvent = deserializer
-                    .deserialize(&mut json_deserializer)
-                    .map_err(|e| Error::Generic(format!("Errore deserializzazione GatewayEvent: {e}")))?;
-
-                gateway_event
-            },
-            WebsocketEvent::Close(close) => {
-                worker::console_debug!("Webscoket connection closed: code={}, reason={}, was_clean={}", 
-                    close.code(), 
-                    close.reason(), 
-                    close.was_clean()
-                );
-                return Ok(());
-            }
-        };
-
-        // TODO: Terminare l'implementazione
+        let shard_id = self.get_shard_id()?;
+        let storage = self.state.storage();
 
         match gateway_event {
             GatewayEvent::Dispatch(seq, event) => {
-                save_last_sequence(&storage, seq)?;
+                save_last_sequence(&storage, shard_id, seq)?;
 
                 worker::console_debug!("Received event: {event:?}");
-        
-                // TODO: Collegare questo evento al Gateway (che dovra' chiamarsi GatewayDispatcher)
+                let response = self.dispatcher.dispatch(event).await?;
 
+                worker::console_debug!("[Gateway]: Dispatcher response: {response:?}");
             },
             GatewayEvent::Heartbeat => {
-                let last_seq = get_last_sequence(&storage)?;
+                let last_seq = get_last_sequence(&storage, shard_id)?;
                 let heartbeat = HeartbeatPayload::new(Some(last_seq));
                 let payload = serde_json::to_string(&heartbeat)?;
                 ws.send_with_str(payload)?;
             },
             GatewayEvent::Hello(hello) => {
                 worker::console_debug!("Received hello: {hello:?}");
+                save_heartbeat_interval(&storage, shard_id, hello.heartbeat_interval)?;
+                
+                let date = Date::new(Millis(Date::now().as_millis() + hello.heartbeat_interval));
+                storage.set_alarm(ScheduledTime::new(date.into())).await?;
             },
             GatewayEvent::HeartbeatAck => {
-
+                worker::console_debug!("Heartbeat ACK ricevuto con successo da Discord.");
+                set_heartbeat_ack(&storage, shard_id, true)?;
             },
             GatewayEvent::Reconnect => {
-
+                let ws = self.get_websocket()?;
+                ws.close(Some(4000), Some("Reconnect requested"))?;
             },
             GatewayEvent::InvalidateSession(resumable) => {
                 worker::console_error!("[DO] Session invalidated! Resumable: {}", resumable);
                 if !resumable {
-                    //storage.delete("last_sequence").await?;
-                    //storage.delete("session_id").await?;
+                    delete_session(&storage, shard_id)?;
                 }
                 ws.close(Some(1000), Some("Session invalidated"))?;
             }
         }
+
+        Ok(())
     }
 
-    Ok(())
+    async fn websocket_close(&self, _ws: WebSocket, code: usize, reason: String, was_clean: bool) -> Result<()> {
+        worker::console_debug!("Webscoket connection closed: code={}, reason={}, was_clean={}", 
+            code, 
+            reason, 
+            was_clean
+        );
+        return Ok(());
+    }
+
+    async fn websocket_error(&self, _ws: WebSocket, error: worker::Error) -> Result<()> {
+        worker::console_error!("[Gateway] Websocket error: {error:?}");
+        Ok(())
+    }
+
+    async fn alarm(&self) -> Result<Response> {
+        let storage = self.state.storage();
+        let shard_id = self.get_shard_id()?;
+
+        if !get_heartbeat_ack(&storage, shard_id)? {
+            worker::console_warn!("Lo Shard {} non ha ricevuto l'ACK precedente. Connessione zombie, chiudo!", shard_id);
+
+            if let Ok(ws) = self.get_websocket() {
+                ws.close(Some(4000), Some("Heartbeat ACK missed"))?;
+            }
+            
+            return Response::ok("");
+        }
+
+        let Ok(ws) = self.get_websocket() else {
+            worker::console_warn!(
+                "[Alarm Shard {}] L'allarme è scattato ma non ho trovato nessuna WebSocket attiva nei tag.", 
+                shard_id
+            );
+
+            return Response::ok("");
+        };
+
+        set_heartbeat_ack(&storage, shard_id, false)?;
+
+        let last_seq = get_last_sequence(&storage, shard_id)?;
+        let heartbeat = HeartbeatPayload::new(if last_seq != 0 { Some(last_seq) } else { None });
+        let payload = serde_json::to_string(&heartbeat)?;
+        ws.send_with_str(payload)?;
+
+        let interval = get_heartbeat_interval(&storage, shard_id)?;
+
+        if interval > 0 {
+            let date = Date::new(Millis(Date::now().as_millis() + interval));
+            storage.set_alarm(ScheduledTime::new(date.into())).await?;
+        }
+
+        Response::empty()
+    }
 }

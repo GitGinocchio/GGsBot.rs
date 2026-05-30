@@ -18,6 +18,14 @@ pub enum QueueBinding {
 }
 
 #[derive(Debug, Serialize, Deserialize, Display, PartialEq)]
+#[allow(unused)]
+pub enum DurableObjectBinding {
+    #[serde(rename = "GATEWAY")]
+    #[strum(serialize = "GATEWAY")]
+    Gateway 
+}
+
+#[derive(Debug, Serialize, Deserialize, Display, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 #[allow(unused)]
 pub enum RatelimiterBinding {
