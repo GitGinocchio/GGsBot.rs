@@ -1,7 +1,7 @@
 
 # GGsBot.rs 
 
-<img src="./resources/graph.svg" />
+<img src="./.github/resources/graph.svg" />
 
 ## TODOs
 - [ ] Creare delle UI per la configurazione dei sottocomandi
