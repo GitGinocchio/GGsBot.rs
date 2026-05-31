@@ -12,7 +12,10 @@ macro_rules! define_queue_message {
         #[serde(tag = "type", content = "data")]
         #[serde(rename_all = "kebab-case")]
         pub enum $name {
-            $($variant($payload)),*
+            $($variant($payload)),*,
+            
+            #[serde(other)]
+            Malformed,
         }
 
         $(
@@ -66,7 +69,8 @@ impl QueueMessage {
     ) -> Result<(), Error> {
         match self {
             QueueMessage::Apod(_) => self.run_batch::<ApodMessageHandler>(batch, env).await,
-            QueueMessage::Tempvc(_) => self.run_batch::<TempvcDeleteChannelHandler>(batch, env).await
+            QueueMessage::Tempvc(_) => self.run_batch::<TempvcDeleteChannelHandler>(batch, env).await,
+            QueueMessage::Malformed => { Ok(()) }
         }
     }
 
