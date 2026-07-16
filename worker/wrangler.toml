@@ -5,7 +5,7 @@ compatibility_date = "2026-04-14"
 main = "build/index.js"
 
 [build]
-command = "cargo install -q worker-build && worker-build --release" # required
+command = "cargo install -q worker-build && worker-build" # required
 
 [assets]
 directory = "./src/assets"
@@ -13,58 +13,23 @@ directory = "./src/assets"
 [vars]
 WORKER_ENV = "production"
 DISCORD_DEVELOPER_ID = "778017089230209045"
+DISCORD_BOT_APPLICATION_ID = "1493638725488476311"
+WORKER_METADATA_BINDING = "metadata"
 
 [env.production.vars]
 WORKER_ENV = "production"
 DISCORD_DEVELOPER_ID = "778017089230209045"
+DISCORD_BOT_APPLICATION_ID = "1493638725488476311"
+WORKER_METADATA_BINDING = "metadata"
 
 [env.local.vars]
 WORKER_ENV = "dev"
 DISCORD_DEVELOPER_ID = "778017089230209045"
+DISCORD_BOT_APPLICATION_ID = "1493638725488476311"
+WORKER_METADATA_BINDING = "metadata"
 
 [version_metadata]
 binding = "metadata"
-
-[[kv_namespaces]]
-binding = "ggsbotkv"
-id = "c1c5302906b04ad1af9c6f87b80f1367"
-
-[triggers]
-crons = [
-  "0 7 * * *"
-]
-
-# Modificare questa coda in modo che diventi una coda generica "tasks"
-# nel quale il bot inserisce delle azioni che dovra' fare in futuro
-[[queues.producers]]
-binding = "TASKS_QUEUE"
-queue = "ggsbotrs-tasks-queue"
-#delivery_delay = 60
-
-[[queues.consumers]]
-queue = "ggsbotrs-tasks-queue"
-max_batch_size = 10
-max_batch_timeout = 0
-max_retries = 3
-max_concurrency = 10
-retry_delay = 60
-#dead_letter_queue = "my-queue-dlq"
-
-[[queues.consumers]]
-queue = "ggsbotrs-gateway-queue"
-max_batch_size = 10
-max_batch_timeout = 0
-max_retries = 3
-max_concurrency = 10
-retry_delay = 5
-
-[[ratelimits]]
-name = "gateway-rate-limiter"
-namespace_id = "0"
-
-  [ratelimits.simple]
-  limit = 50
-  period = 10
 
 [observability]
 enabled = false

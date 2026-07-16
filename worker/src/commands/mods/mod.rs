@@ -1,30 +1,24 @@
-pub mod clear;
+use flarecord::models::command::SubcommandType;
+use flarecord::prelude::*;
+use flarecord::command;
 
-use async_trait::async_trait;
+use crate::commands::mods::clear::Clear;
 
-use crate::{
-    build_commands, 
-    commands::mods, 
-    framework::discord::command::{
-        Command, 
-        CommandMap
-    }
-};
+mod clear;
 
-#[derive(Default)]
-pub(crate) struct Mods {}
-
-#[async_trait(?Send)]
+#[command]
 impl Command for Mods {
     fn name(&self) -> String {
         "mods".into()
     }
 
     fn description(&self) -> String {
-        "Canali dedicati ai moderatori dei canali!".into()
+        "Set of commands used for chat moderation".into()
     }
 
-    fn subcommands(&self) -> CommandMap {
-        build_commands![mods::clear::Clear]
+    fn subcommands(&self) -> Vec<SubcommandType> {
+        vec![
+            Clear.into_subcommand()
+        ]
     }
 }

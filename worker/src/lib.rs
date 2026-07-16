@@ -1,48 +1,19 @@
+use flarecord::prelude::*;
 use worker::*;
 
-use crate::{
-    framework::structs::{
-        queue::{QueueMessage, QueueProcessor}, 
-        scheduler::Scheduler
-    }, 
-    routes::api
-};
-
-mod constants;
 mod commands;
-mod error;
-mod framework;
-mod queues;
-mod services;
-mod triggers;
-mod bindings;
-mod routes;
-mod ui;
-mod utils;
-
-#[event(queue)]
-pub async fn on_queue(
-    batch: MessageBatch<QueueMessage>,
-    env: Env,
-    ctx: Context,
-) -> Result<()> {
-    QueueProcessor::new(env, ctx).process(batch).await
-}
-
-#[event(scheduled)]
-pub async fn scheduled(event: ScheduledEvent, env: Env, ctx: ScheduleContext) {
-    Scheduler::new(env, ctx).schedule(event).await;
-}
 
 #[event(fetch)]
 pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Response> {
-    utils::log_request(&req);
-    utils::set_panic_hook();
+    let bot = Bot::new();
 
     Router::new()
-        .post_async("/api/interaction", |req, ctx| api::interaction::post(req, ctx))
-        .post_async("/api/gateway", |req, ctx| api::gateway::post(req, ctx))
-        .get_async("/api/commands", |req, ctx| api::commands::get(req, ctx))
+        .post_async("/api/interaction", async |req, env| { bot.handle_interaction(req, env.env).await })
+        .on_async("/api/*path", async |req, env| { bot.handle_api(req, env.env).await })
+        
+        .or_else_any_method_async("/*path", async |_, _| { Response::error("Method not allowed", 405)})
+        .on_async("/*path", async |_, _| { Response::error("Not Found", 404)})
+        
         .run(req, env)
         .await
 }

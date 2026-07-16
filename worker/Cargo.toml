@@ -12,26 +12,18 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 cfg-if = "1.0.4"
-worker = { version = "0.8.3", features = [ "queue" ] }
+ 
+worker = { version = "0.8.5", features = [ "queue" ] }
+flarecord = { path = "../../flarecordrs/" }
+
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.67"
-serde_repr = "0.1.20"
-thiserror = "2.0.18"
-ed25519-dalek = "2.2.0"
-hex = "0.4.2"
-reqwest = { version = "0.13.3", features = ["json"] }
-async-trait = "0.1.57"
-chrono = { version = "0.4.44", features = ["serde"] }
-twilight-model = { version = "0.17.1", features = [] }
-url = "2.5.8"
+serde_json = "1.0.150"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.1", optional = true }
-futures = "0.3.32"
-strum_macros = "0.28.0"
 
 [profile.release]
 opt-level = "z"     # Ottimizza specificamente per la dimensione del file
