@@ -5,31 +5,49 @@ compatibility_date = "2026-04-14"
 main = "build/index.js"
 
 [build]
-command = "cargo install -q worker-build && worker-build" # required
+command = "cargo install -q worker-build && worker-build --release" # required
 
 [assets]
 directory = "./src/assets"
+
+#[[durable_objects.bindings]]
+#name = "gateway"
+#class_name = "DiscordGateway"
+
+#[exports.DiscordGateway]
+#type = "durable-object"
+#storage = "sqlite"
+
+#[[migrations]]
+#tag = "v2"
+#new_sqlite_classes = ["DiscordGateway"]
+
+[[migrations]]
+tag = "v3"
+
+[version_metadata]
+binding = "metadata"
 
 [vars]
 WORKER_ENV = "production"
 DISCORD_DEVELOPER_ID = "778017089230209045"
 DISCORD_BOT_APPLICATION_ID = "1493638725488476311"
 WORKER_METADATA_BINDING = "metadata"
+WORKER_GATEWAY_DO_BINDING = "gateway"
 
 [env.production.vars]
 WORKER_ENV = "production"
 DISCORD_DEVELOPER_ID = "778017089230209045"
 DISCORD_BOT_APPLICATION_ID = "1493638725488476311"
 WORKER_METADATA_BINDING = "metadata"
+WORKER_GATEWAY_DO_BINDING = "gateway"
 
 [env.local.vars]
 WORKER_ENV = "dev"
 DISCORD_DEVELOPER_ID = "778017089230209045"
 DISCORD_BOT_APPLICATION_ID = "1493638725488476311"
 WORKER_METADATA_BINDING = "metadata"
-
-[version_metadata]
-binding = "metadata"
+WORKER_GATEWAY_DO_BINDING = "gateway"
 
 [observability]
 enabled = false
